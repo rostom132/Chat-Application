@@ -17,11 +17,12 @@ import java.util.stream.Stream;
 
 public class Server extends  Thread{
     private final int serverPort;
+    private int poolID = 0;
     private  static ExecutorService pool = Executors.newFixedThreadPool(4);
 
-    private ArrayList<ServerlHandler> clientList = new ArrayList<ServerlHandler>();
-    private HashMap<String, UserInfo> clientData = new HashMap<String, UserInfo>();
-    private HashMap<String, String> requestPool = new HashMap<String, String>();
+    private ArrayList<ClientHandler> userList = new ArrayList<ClientHandler>();
+    private HashMap<String, UserInfo> userData = new HashMap<String, UserInfo>();
+    private HashMap<String, UserInfo> requestPool = new HashMap<String, UserInfo>();
 
     public void Encoder(String username, String pass, int ip) throws IOException {
         // Write
@@ -35,7 +36,7 @@ public class Server extends  Thread{
             userInfo.setPassWord(pass);
             userInfo.setPort(ip);
             encoder.writeObject(userInfo);
-            clientData.put(username, userInfo);
+            userData.put(username, userInfo);
             encoder.close();
             os.close();
         } catch (FileNotFoundException e) {
@@ -53,8 +54,8 @@ public class Server extends  Thread{
             userInfo = (UserInfo) decoder.readObject();
             is.close();
             decoder.close();
-            clientData.put(userInfo.getUserName(), userInfo);
-            System.out.println(clientData);
+            userData.put(userInfo.getUserName(), userInfo);
+            System.out.println(userData);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -64,16 +65,17 @@ public class Server extends  Thread{
 
     public void readFile() {
         // Read
-
         try (Stream<Path> walk = Files.walk(Paths.get("./ChatServer/User"))) {
 
             List<String> result = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
-
-           for(String s:result) {
-               Decoder(s);
-           }
-
+            if(result == null)  {
+                return;
+            } else {
+                for (String s : result) {
+                    Decoder(s);
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -85,40 +87,48 @@ public class Server extends  Thread{
         this.serverPort = serverPort;
     }
 
-    public List<ServerlHandler> getClientList() {
-        return clientList;
+    public ArrayList<ClientHandler> getUserList() {
+        return userList;
     }
 
-    public HashMap<String, UserInfo> getClientInfo() {
-        return clientData;
+    public HashMap<String, UserInfo> getUserInfo() {
+        return userData;
     }
 
-    public HashMap<String, String> getRequestPool() {
+    public HashMap<String, UserInfo> getRequestPool() {
         return requestPool;
     }
 
-    public void addClient(ServerlHandler serverlHandler) {
-        clientList.add(serverlHandler);
+    public void addUser(ClientHandler serverlHandler) {
+        userList.add(serverlHandler);
     }
 
-    public void removeClient(ServerlHandler serverlHandler) {
-        clientList.remove(serverlHandler);
+    public void removeUser(ClientHandler serverlHandler) {
+        userList.remove(serverlHandler);
     }
 
-    public void addClientInfo(String username, UserInfo userInfo) {
-        clientData.put(username, userInfo);
+    public void addUserInfo(String username, UserInfo userInfo) {
+        userData.put(username, userInfo);
     }
 
-    public void addRequest(String sender, String reveiver) {
+    public int getPoolID() {
+        return poolID;
+    }
+
+    public void setPoolID(int poolID) {
+        this.poolID = poolID;
+    }
+
+    public void addRequest(String sender, UserInfo reveiver) {
         requestPool.put(sender, reveiver);
     }
 
-    public void removeRequest(String receiver) {
-        Iterator<Map.Entry<String, String>> iterator = requestPool.entrySet().iterator();
+    public void removeRequest(UserInfo receiver) {
+        Iterator<Map.Entry<String, UserInfo>> iterator = requestPool.entrySet().iterator();
         while(iterator.hasNext()) {
-            Map.Entry<String, String> entryPoint = iterator.next();
-            System.out.println(entryPoint.getKey() + " " + entryPoint.getValue());
-            if(entryPoint.getValue().equals(receiver)) iterator.remove();
+            Map.Entry<String, UserInfo> entryPoint = iterator.next();
+            System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
+            if(entryPoint.getValue().getUserName().equals(receiver.getUserName())) iterator.remove();
         }
     }
 
@@ -134,7 +144,7 @@ public class Server extends  Thread{
                 Socket clientSocket = serverSocket.accept();
 
                 System.out.println("Accepted connection from" + clientSocket);
-                ServerlHandler newClient = new ServerlHandler(this, clientSocket);
+                ClientHandler newClient = new ClientHandler(this, clientSocket);
                 //clientList.add(newClient);
                 newClient.start();
                 //pool.execute(newClient);
