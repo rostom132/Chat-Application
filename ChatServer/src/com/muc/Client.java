@@ -6,7 +6,20 @@ import java.net.Socket;
 
 public class Client {
     final static int ServerPort = 8818;
-    private static Integer flag_count = 0;
+
+    private static void receiveFile(Socket socket, PrintWriter out, String fileName) throws IOException {
+        byte[] fileBuffer = new byte[20000];
+        InputStream is = socket.getInputStream();
+        is.read(fileBuffer, 0, fileBuffer.length);
+
+        FileOutputStream fos = new FileOutputStream("result" + fileName);
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+        bos.write(fileBuffer, 0, fileBuffer.length);
+        bos.close();
+        // Send response to server
+        String response = "OK fileTransfer";
+        out.println(response);
+    }
 
     public static void main(String[] args) throws IOException {
         InetAddress ip = InetAddress.getByName("localhost");
@@ -46,8 +59,15 @@ public class Client {
                     try {
                         String serverResponse = input.readLine();
                         if(serverResponse != null) {
-                            serverResponse = "Server says: " + serverResponse + "\n";
-                            System.out.println(serverResponse);
+                            if(serverResponse.contains("sending")) {
+                                System.out.println(serverResponse);
+                                String[] responseArr = serverResponse.split(":", 2);
+                                String fileName = responseArr[1];
+                                receiveFile(s, out, fileName);
+                            } else {
+                                serverResponse = "Server says: " + serverResponse + "\n";
+                                System.out.println(serverResponse);
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

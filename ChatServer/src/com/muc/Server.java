@@ -36,7 +36,7 @@ public class Server extends  Thread{
             userInfo.setPassWord(pass);
             userInfo.setPort(ip);
             encoder.writeObject(userInfo);
-            userData.put(username, userInfo);
+            //userData.put(username, userInfo);
             encoder.close();
             os.close();
         } catch (FileNotFoundException e) {
@@ -87,28 +87,31 @@ public class Server extends  Thread{
         this.serverPort = serverPort;
     }
 
+    // Methods for processing userList in server
     public ArrayList<ClientHandler> getUserList() {
         return userList;
     }
 
+    public void addUser(ClientHandler clientHandler) {
+        userList.add(clientHandler);
+    }
+
+    public void removeUser(ClientHandler clientHandler) {
+        userList.remove(clientHandler);
+    }
+
+    // Methods for processing userInfo
     public HashMap<String, UserInfo> getUserInfo() {
         return userData;
     }
 
-    public HashMap<String, UserInfo> getRequestPool() {
-        return requestPool;
-    }
-
-    public void addUser(ClientHandler serverlHandler) {
-        userList.add(serverlHandler);
-    }
-
-    public void removeUser(ClientHandler serverlHandler) {
-        userList.remove(serverlHandler);
-    }
-
     public void addUserInfo(String username, UserInfo userInfo) {
         userData.put(username, userInfo);
+    }
+
+    // Methods for processing request
+    public HashMap<String, UserInfo> getRequestPool() {
+        return requestPool;
     }
 
     public int getPoolID() {
