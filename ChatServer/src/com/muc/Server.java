@@ -20,67 +20,15 @@ public class Server extends  Thread{
     private int poolID = 0;
     private  static ExecutorService pool = Executors.newFixedThreadPool(4);
 
+    private XML xml = new XML();
+    private String userPath = "./ChatServer/User";
+
     private ArrayList<ClientHandler> userList = new ArrayList<ClientHandler>();
     private HashMap<String, UserInfo> userData = new HashMap<String, UserInfo>();
     private HashMap<String, UserInfo> requestPool = new HashMap<String, UserInfo>();
 
-    public void Encoder(String username, String pass, int ip) throws IOException {
-        // Write
-        FileOutputStream os = null;
-        try {
-            os = new FileOutputStream(new File("./ChatServer/User/client" + username +".xml"));
-            XMLEncoder encoder = new XMLEncoder(os);
-
-            UserInfo userInfo = new UserInfo();
-            userInfo.setUserName(username);
-            userInfo.setPassWord(pass);
-            userInfo.setPort(ip);
-            encoder.writeObject(userInfo);
-            //userData.put(username, userInfo);
-            encoder.close();
-            os.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public void Decoder(String file) {
-        UserInfo userInfo = new UserInfo();
-        FileInputStream is = null;
-        try {
-            is = new FileInputStream(new File(file));
-            XMLDecoder decoder = new XMLDecoder(is);
-            userInfo = (UserInfo) decoder.readObject();
-            is.close();
-            decoder.close();
-            userData.put(userInfo.getUserName(), userInfo);
-            System.out.println(userData);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void readFile() {
-        // Read
-        try (Stream<Path> walk = Files.walk(Paths.get("./ChatServer/User"))) {
-
-            List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString()).collect(Collectors.toList());
-            if(result == null)  {
-                return;
-            } else {
-                for (String s : result) {
-                    Decoder(s);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
+    public String getUserPath() {
+        return userPath;
     }
 
     public Server(int serverPort) {
@@ -140,7 +88,7 @@ public class Server extends  Thread{
         try  {
             ServerSocket serverSocket = new ServerSocket(serverPort);
 
-            readFile();
+            xml.readFileUser(userPath);
 
             while(true) {
                 System.out.println("About to accept client connection...");
@@ -148,7 +96,6 @@ public class Server extends  Thread{
 
                 System.out.println("Accepted connection from" + clientSocket);
                 ClientHandler newClient = new ClientHandler(this, clientSocket);
-                //clientList.add(newClient);
                 newClient.start();
                 //pool.execute(newClient);
             }

@@ -11,6 +11,9 @@ public class ClientHandler extends  Thread{
     private final Server server;
     private final BufferedReader in;
     private final PrintWriter out;
+
+    private XML xml = new XML();
+
     // State of processing
     private String state = "LOGIN";
 
@@ -177,8 +180,8 @@ public class ClientHandler extends  Thread{
                     }
                 }
                 if(signUpSuccess == true) {
-                    server.addUserInfo(newUserName, userInfo);
-                    server.Encoder(newUserName, newPassword, 0);
+                    UserInfo newUser = new UserInfo(newUserName, newPassword);
+                    server.addUserInfo(newUserName, newUser);
                     out.println("OK signup");
                 }
                 else {
@@ -194,6 +197,8 @@ public class ClientHandler extends  Thread{
         private void handleLogOff() throws IOException {
             server.removeUser(getClientHandler());
             systematic.broadcastStatus(server.getUserList(), "offline");
+            // Store all the friend made to the xml file
+            xml.Encoder(server.getUserPath(), userInfo, friendList);
             System.out.println("User " + userInfo.getUserName() + " has disconnect");
         }
 
@@ -219,7 +224,7 @@ public class ClientHandler extends  Thread{
                     }
                 }
 
-                // Disp result
+                // Display result and handle login functions
                 if(isCreated == true && isDupplicated == false) {
                     userInfo.setUserName(input_userName);
                     userInfo.setPassWord(input_passWord);
@@ -227,6 +232,11 @@ public class ClientHandler extends  Thread{
 
                     // send msg to server
                     System.out.println("User " + userInfo.getUserName() + " has login " + new Date());
+
+                    // read all the friend of the current user
+                    ArrayList<UserInfo> getList = new ArrayList<UserInfo>();
+                    xml.readFileFriend(server.getUserPath(), userInfo, friendList, "Friend");
+                    System.out.println(friendList);
 
                     // broadcast offline to friend list
                     systematic.broadcastStatus(server.getUserList(), "online");
@@ -240,6 +250,9 @@ public class ClientHandler extends  Thread{
                     out.println("The account is already logged in");
                     return false;
                 }
+            }
+            else {
+                out.println("Invalid parameters");
             }
             return false;
         }
