@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 public class XML {
 
+    private String userPath = "./ChatServer/User";
     private HashMap<String, UserInfo> userData = null;
 
     public XML() {
@@ -23,12 +24,28 @@ public class XML {
         this.userData = userData;
     }
 
-    public void Encoder(String writtenPath, UserInfo userInfo, ArrayList<UserInfo> friendList) throws IOException {
+    public String getUserPath() {
+        return userPath;
+    }
+
+    public List<String> getXMLFile() {
+        List<String> result = null;
+        try (Stream<Path> walk = Files.walk(Paths.get(userPath))) {
+
+            result = walk.filter(Files::isRegularFile)
+                    .map(x -> x.toString()).collect(Collectors.toList());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public void Encoder(UserInfo userInfo, ArrayList<UserInfo> friendList) throws IOException {
         // Write all the information of user to xml file
         FileOutputStream os = null;
         String user_userName = userInfo.getUserName();
         try {
-            os = new FileOutputStream(new File(writtenPath + "/" + user_userName + ".xml"));
+            os = new FileOutputStream(new File(userPath + "/" + user_userName + ".xml"));
             XMLEncoder encoder = new XMLEncoder(os);
             // Write the userInfo
             encoder.writeObject(userInfo);
@@ -59,10 +76,12 @@ public class XML {
             } else {
                 // Get the length of the friend list
                 Integer length = (Integer) decoder.readObject();
-                for (int i = 0; i < length; i++) {
-                    UserInfo friendInfo = (UserInfo) decoder.readObject();
-                    // Write all the userFriend in the friend list
-                    friendList.add(friendInfo);
+                if(length != null) {
+                    for (int i = 0; i < length; i++) {
+                        UserInfo friendInfo = (UserInfo) decoder.readObject();
+                        // Write all the userFriend in the friend list
+                        friendList.add(friendInfo);
+                    }
                 }
             }
             is.close();
@@ -72,45 +91,84 @@ public class XML {
         }
     }
 
-    public void readFileUser(String userPath) {
-        // Read all userInfo.xml
-        try (Stream<Path> walk = Files.walk(Paths.get(userPath))) {
-
-            List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString()).collect(Collectors.toList());
-            if(result == null)  {
-                return;
-            } else {
-                for (String s : result) {
-                    Decoder(s, null, "Info");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void readFileUser(List<String> XMLFile) throws IOException {
+        if(XMLFile == null) return;
+        for (String s : XMLFile) {
+            Decoder(s, null, "Info");
         }
     }
 
-    public void readFileFriend(String userPath, UserInfo userInfo, ArrayList<UserInfo> friendList, String typeToRead) {
+    public void readFileFriend(List<String> XMLFile, UserInfo userInfo, ArrayList<UserInfo> friendList) throws IOException {
+        if(XMLFile == null) return;
         String user_userName = userInfo.getUserName();
-        try (Stream<Path> walk = Files.walk(Paths.get(userPath))) {
-            List<String> result = walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString()).collect(Collectors.toList());
-            if(result == null)  {
-                return;
-            } else {
-                String concact = user_userName + ".xml";
-                for (String s : result) {
-                    System.out.println(s);
-                    if(s.contains(concact)) {
-                        System.out.println(s + ":" + concact);
-                        Decoder(s, friendList, "Friend");
-                        break;
+        String concact = user_userName + ".xml";
+        for (String s : XMLFile) {
+            if(s.contains(concact)) {
+                System.out.println(s + " : " + concact);
+                // Case Read: "Friend" and "Info"
+                Decoder(s, friendList, "Friend");
+                break;
+            }
+        }
+    }
+
+    public void removeFileContainer(List<String> XMLFile, UserInfo userInfo, String removeName) throws IOException {
+        if(XMLFile == null) return;
+        String user_userName = userInfo.getUserName();
+        String concact = user_userName + ".xml";
+        for (String s : XMLFile) {
+            if(s.contains(concact)) {
+                System.out.println(s);
+                removeFriend(s, removeName);
+                break;
+            }
+        }
+    }
+
+    public void removeUser(List<String> XMLFile, UserInfo userInfo) {
+        // Remove the userInfo from the database
+        if(XMLFile == null) return;
+        String user_userName = userInfo.getUserName();
+        String concact = user_userName + ".xml";
+        for(String s : XMLFile) {
+            if(s.contains(concact)) {
+                File f = new File(s);
+                    if(f.delete()) {
+                        System.out.println("Deleted successfully");
                     }
+            }
+        }
+    }
+
+    public void removeFriend(String file, String removeName) throws IOException {
+        FileInputStream is = null;
+        try {
+            is = new FileInputStream(new File(file));
+            XMLDecoder decoder = new XMLDecoder(is);
+            // Pass the read the userInfo
+            UserInfo userInfo = (UserInfo) decoder.readObject();
+            // Read of the length of friend list
+            Integer length = (Integer) decoder.readObject();
+            // Create new friendList array to store
+            ArrayList<UserInfo> temp = new ArrayList<UserInfo>();
+            System.out.println("Temp before: ");
+            for (int i = 0; i < length; i++) {
+                UserInfo friendInfo = (UserInfo) decoder.readObject();
+                if(!friendInfo.getUserName().equals(removeName)) {
+                    temp.add(friendInfo);
                 }
             }
-        } catch (IOException e) {
+            System.out.println("Temp after: " + temp);
+            for(UserInfo user : temp) {
+                System.out.println(user.getUserName());
+            }
+            Encoder(userInfo, temp);
+            is.close();
+            decoder.close();
+        } catch(FileNotFoundException e) {
             e.printStackTrace();
         }
+        return;
     }
 
 }

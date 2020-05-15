@@ -15,20 +15,20 @@ import java.beans.XMLDecoder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Server extends  Thread{
+public class Server extends Thread{
     private final int serverPort;
     private int poolID = 0;
     private  static ExecutorService pool = Executors.newFixedThreadPool(4);
 
-    private XML xml = new XML();
-    private String userPath = "./ChatServer/User";
-
+    private List<String> XMLFile = null;
     private ArrayList<ClientHandler> userList = new ArrayList<ClientHandler>();
     private HashMap<String, UserInfo> userData = new HashMap<String, UserInfo>();
     private HashMap<String, UserInfo> requestPool = new HashMap<String, UserInfo>();
 
-    public String getUserPath() {
-        return userPath;
+    private XML xml = new XML(userData);
+
+    public List<String> getXMLFile() {
+        return XMLFile;
     }
 
     public Server(int serverPort) {
@@ -74,11 +74,20 @@ public class Server extends  Thread{
         requestPool.put(sender, reveiver);
     }
 
+    public void removeUserInfo(String user_userName) {
+        Iterator<Map.Entry<String, UserInfo>> iterator = userData.entrySet().iterator();
+        while(iterator.hasNext()) {
+            Map.Entry<String, UserInfo> entryPoint = iterator.next();
+            System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
+            if(entryPoint.getKey().equals(user_userName)) iterator.remove();
+        }
+    }
+
     public void removeRequest(UserInfo receiver) {
         Iterator<Map.Entry<String, UserInfo>> iterator = requestPool.entrySet().iterator();
         while(iterator.hasNext()) {
             Map.Entry<String, UserInfo> entryPoint = iterator.next();
-            System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
+            //System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
             if(entryPoint.getValue().getUserName().equals(receiver.getUserName())) iterator.remove();
         }
     }
@@ -87,16 +96,18 @@ public class Server extends  Thread{
     public void run() {
         try  {
             ServerSocket serverSocket = new ServerSocket(serverPort);
-
-            xml.readFileUser(userPath);
-
+            XMLFile = xml.getXMLFile();
+            System.out.println("File read by server: " + XMLFile);
+            xml.readFileUser(XMLFile);
             while(true) {
                 System.out.println("About to accept client connection...");
                 Socket clientSocket = serverSocket.accept();
-
-                System.out.println("Accepted connection from" + clientSocket);
-                ClientHandler newClient = new ClientHandler(this, clientSocket);
-                newClient.start();
+                if(clientSocket != null) {
+                    XMLFile = xml.getXMLFile();
+                    System.out.println("Accepted connection from" + clientSocket);
+                    ClientHandler newClient = new ClientHandler(this, clientSocket);
+                    newClient.start();
+                }
                 //pool.execute(newClient);
             }
         }  catch(IOException e) {

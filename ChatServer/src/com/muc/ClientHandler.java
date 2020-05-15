@@ -5,12 +5,16 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class ClientHandler extends  Thread{
+public  class ClientHandler extends Thread{
     private final Socket clientSocket;
     private final Server server;
     private final BufferedReader in;
     private final PrintWriter out;
+
+    // Synchronize purpose
+    private ReentrantLock mutex = new ReentrantLock();
 
     private XML xml = new XML();
 
@@ -28,7 +32,8 @@ public class ClientHandler extends  Thread{
     private HandleUserRequest handleUserRequest = new HandleUserRequest();
     private Friend friend = new Friend();
     private HandlePoolRequest handlePoolRequest = new HandlePoolRequest();
-    private FileTransfer fileTransfer = new FileTransfer();
+    private MyRunnable fileTransfer;
+    private FileTransfer fileDeliver = new FileTransfer();
 
     public ClientHandler(Server server, Socket clientSocket) throws IOException {
         this.server = server;
@@ -61,6 +66,7 @@ public class ClientHandler extends  Thread{
 
     private void handleClientSocket() throws IOException, InterruptedException {
         // Handler user cmd
+
         String clientInput;
         while(((clientInput = in.readLine()) != null) || !state.equals("END")) {
             String[] tokens = StringUtils.split(clientInput);
@@ -88,6 +94,7 @@ public class ClientHandler extends  Thread{
                             case "quit":
                                 handleUserRequest.handleLogOff();
                                 state = "END";
+                                out.println("end");
                                 break;
                             case "list":
                                 systematic.displayAllOnlineClients(server.getUserList());
@@ -95,15 +102,25 @@ public class ClientHandler extends  Thread{
                             case "friend":
                                 friend.displayFriendStatusList(server.getUserList());
                                 break;
+                            case "search":
+                                friend.searchFriend(tokens);
+                                break;
                             case "add":
                                 handlePoolRequest.addFriend(server.getUserList(),tokens);
+                                break;
+                            case "remove":
+                                friend.clientRemoveFriend(server.getUserList(), tokens);
                                 break;
                             case "view":
                                 handlePoolRequest.handleRequest(server.getRequestPool(), server.getUserList());
                                 break;
                             case "sendfile":
-                                // Transfer file to other user
                                 handlePoolRequest.sendFile(server.getUserList() ,tokens);
+                                break;
+                            case "delete":
+                                handleUserRequest.deleteAccount(server.getUserList());
+                                state = "END";
+                                out.println("end");
                                 break;
                             default:
                                 String notification = "Unknown command " + cmd;
@@ -115,7 +132,6 @@ public class ClientHandler extends  Thread{
             }
         }
     }
-
 
     private class FileTransfer {
 
@@ -129,14 +145,65 @@ public class ClientHandler extends  Thread{
         }
     }
 
+    private class MyRunnable implements Runnable {
+
+        private final File myFile;
+
+        public MyRunnable(File myFile) {
+            // store parameter for later user
+            this.myFile = myFile;
+        }
+
+        public void run() {
+            //byte[] fileBuffer = new byte[(int) myFile.length()];
+            byte[] fileBuffer = new byte[400000];
+            BufferedInputStream bis = null;
+            try {
+                bis = new BufferedInputStream(new FileInputStream(myFile));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            try {
+                bis.read(fileBuffer, 0, fileBuffer.length);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            OutputStream os = null;
+            try {
+                os = clientSocket.getOutputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                os.write(fileBuffer, 0, fileBuffer.length);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                os.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private class Systematic {
-        public UserInfo getUserInfo() {
+        private UserInfo getUserInfo() {
             return userInfo;
         }
 
         private boolean isUserInFriendList(String friend) {
             for(UserInfo name : friendList) {
                 if(name.getUserName().equals(friend)) return true;
+            }
+            return false;
+        }
+
+        private boolean isUserOnline(ArrayList<ClientHandler> userList, String name) {
+            for(ClientHandler user : userList) {
+                if(user.systematic.getUserInfo().getUserName().equals(name)) {
+                    return true;
+                }
             }
             return false;
         }
@@ -181,7 +248,15 @@ public class ClientHandler extends  Thread{
                 }
                 if(signUpSuccess == true) {
                     UserInfo newUser = new UserInfo(newUserName, newPassword);
-                    server.addUserInfo(newUserName, newUser);
+                    // Use mutex lock to protect the hashmap
+                    try {
+                        mutex.lock();
+                        server.addUserInfo(newUserName, newUser);
+                    } finally {
+                        mutex.unlock();
+                    }
+                    // Write the userInfo to the xml file
+                    xml.Encoder(newUser, friendList);
                     out.println("OK signup");
                 }
                 else {
@@ -192,14 +267,6 @@ public class ClientHandler extends  Thread{
                 String msg = "Invalid input";
                 out.println(msg);
             }
-        }
-
-        private void handleLogOff() throws IOException {
-            server.removeUser(getClientHandler());
-            systematic.broadcastStatus(server.getUserList(), "offline");
-            // Store all the friend made to the xml file
-            xml.Encoder(server.getUserPath(), userInfo, friendList);
-            System.out.println("User " + userInfo.getUserName() + " has disconnect");
         }
 
         private boolean handleLogin(HashMap<String, UserInfo> dataInfo , ArrayList<ClientHandler> userList, String[] tokens) throws IOException {
@@ -230,17 +297,23 @@ public class ClientHandler extends  Thread{
                     userInfo.setPassWord(input_passWord);
                     out.println("OK login");
 
-                    // send msg to server
+                    // Send msg to server
                     System.out.println("User " + userInfo.getUserName() + " has login " + new Date());
 
-                    // read all the friend of the current user
-                    ArrayList<UserInfo> getList = new ArrayList<UserInfo>();
-                    xml.readFileFriend(server.getUserPath(), userInfo, friendList, "Friend");
-                    System.out.println(friendList);
+                    // Read all the friend of the current user
+                    System.out.println(server.getXMLFile());
+                    xml.readFileFriend(server.getXMLFile(), userInfo, friendList);
+                    System.out.println("FriendList: " + friendList);
 
-                    // broadcast offline to friend list
+                    // Broadcast offline to friend list
                     systematic.broadcastStatus(server.getUserList(), "online");
-                    server.addUser(getClientHandler());
+                    // Use mutex lock to protect the userList
+                    try {
+                        mutex.lock();
+                        server.addUser(getClientHandler());
+                    } finally {
+                        mutex.unlock();
+                    }
                     return true;
 
                 } else if(isCreated == false){
@@ -256,20 +329,132 @@ public class ClientHandler extends  Thread{
             }
             return false;
         }
+
+        private void handleLogOff() {
+            // Use mutex lock to protect the userList
+            try {
+                mutex.lock();
+                server.removeUser(getClientHandler());
+            } finally {
+                mutex.unlock();
+            }
+            systematic.broadcastStatus(server.getUserList(), "offline");
+            System.out.println(friendList.size());
+            System.out.println("User " + userInfo.getUserName() + " has disconnect");
+        }
+
+        private void deleteAccount(ArrayList<ClientHandler> userList) throws IOException {
+            // Remove user from the current userList
+            try {
+                mutex.lock();
+                server.removeUser(getClientHandler());
+            } finally {
+                mutex.unlock();
+            }
+            // Remove this user from the friendList of online users
+            for(ClientHandler user : userList) {
+                user.friend.removeFriendByName(userInfo.getUserName());
+            }
+            // Remove in the XML file
+            for(String s : server.getUserInfo().keySet()) {
+                if(!s.equals(userInfo.getUserName())) {
+                    UserInfo userInfo = server.getUserInfo().get(s);
+                    xml.removeFileContainer(server.getXMLFile(), userInfo, userInfo.getUserName());
+                }
+                else server.removeUserInfo(userInfo.getUserName());
+            }
+            System.out.println(server.getUserInfo());
+            // Delete the file
+            xml.removeUser(server.getXMLFile(), userInfo);
+        }
     }
 
     private class Friend {
 
-        public ArrayList<UserInfo> getFriendList() {
-            return friendList;
+        private void removeFriendByName(String removeName) {
+            for(UserInfo friend : friendList) {
+                if(friend.getUserName().equals(removeName)) {
+                    friendList.remove(friend);
+                    break;
+                }
+            }
         }
 
-        public void clientAddFriend(UserInfo friendInfo) {
-            friendList.add(friendInfo);
+        private void clientRemoveFriend(ArrayList<ClientHandler> userList, String[] tokens) throws IOException {
+            if(tokens.length == 2) {
+                // Get the responseUser to delete
+                String removeName = tokens[1];
+                // Check if you remove yourself
+                if(userInfo.getUserName().equals(removeName)) {
+                    out.println("You cannot remove yourself");
+                } else {
+                    // Check if the removeFriend is in the friendList
+                    boolean isFriend = systematic.isUserInFriendList(removeName);
+                    if(isFriend == false) {
+                        out.println("The user is not in the friend list");
+                        return;
+                    }
+                    // Remove the friend in the requestUser
+                    friend.removeFriendByName(removeName);
+                    // Remove in the xml file
+                    xml.Encoder(userInfo, friendList);
+                    System.out.println(friendList);
+                    // Remove case: the removeUser is currently online
+                    for(ClientHandler user : userList) {
+                        if(user.userInfo.getUserName().equals(removeName)) {
+                            // Remove the friend in the responseUser
+                            user.friend.removeFriendByName(userInfo.getUserName());
+                            // Remove in the xml file
+                            user.xml.Encoder(user.userInfo, user.friendList);
+                            System.out.println(user.friendList);
+                            out.println("Remove successful");
+                            user.out.println(userInfo.getUserName() + " remove you");
+                            return;
+                        }
+                    }
+                    // Remove case: the removerUser is currently offline
+                    // --> Read in the xml file of requestUser and responseUser
+                    UserInfo removeFriendAtUserInfo = new UserInfo();
+                    for(String s : server.getUserInfo().keySet()) {
+                        if(s.equals(removeName)) {
+                            removeFriendAtUserInfo = server.getUserInfo().get(s);
+                        }
+                    }
+                    System.out.println("Offline: " + removeFriendAtUserInfo);
+                    xml.removeFileContainer(server.getXMLFile(), removeFriendAtUserInfo, userInfo.getUserName());
+                    out.println("Remove successful");
+                }
+            } else {
+                out.println("Invalid parameter");
+            }
         }
 
-        public void clientRemoveFriend(UserInfo friendInfo) {
-            friendList.remove(friendInfo);
+        private void searchFriend(String[] tokens) {
+            if(tokens.length == 2) {
+                // Get the searchName
+                String searchName = tokens[1];
+                // Check if the searchName is in the friendList
+                boolean isAlreadyFriend = systematic.isUserInFriendList(searchName);
+                if(isAlreadyFriend == false) {
+                    out.println("Friend not found");
+                    return;
+                }
+                // Loop in the friendList to check for status
+                for (UserInfo friend : friendList) {
+                    if (friend.getUserName().equals(searchName)) {
+                        boolean isFriendOnline = systematic.isUserOnline(server.getUserList(), searchName);
+                        if(isFriendOnline == true) {
+                            String onl_msg = searchName + " online";
+                            out.println(onl_msg);
+                            return;
+                        }
+                    }
+                }
+                String off_msg = searchName + " offline";
+                out.println(off_msg);
+            } else {
+                out.println("Invalid parameter");
+            }
         }
 
         private void displayFriendStatusList(ArrayList<ClientHandler> userList) throws IOException {
@@ -332,8 +517,14 @@ public class ClientHandler extends  Thread{
                         out.println("File request has been sent");
                         user.out.println(user_userName + " sent you a file");
                         int id = server.getPoolID();
-                        server.setPoolID(id + 1);
-                        server.addRequest(user_userName + ":" + id + ":File:" + dir, user.systematic.getUserInfo());
+                        // Use mutex lock to protect the pool id and request pool
+                        try {
+                            mutex.lock();
+                            server.setPoolID(id + 1);
+                            server.addRequest(user_userName + ":" + id + ":File:" + dir, user.systematic.getUserInfo());
+                        } finally {
+                            mutex.unlock();
+                        }
                     }
                 }
             } else {
@@ -362,8 +553,14 @@ public class ClientHandler extends  Thread{
                     for (ClientHandler user : userList) {
                         if (friendToAdd.equals(user.systematic.getUserInfo().getUserName())) {
                             int id = server.getPoolID();
-                            server.setPoolID(id + 1);
-                            server.addRequest(user_userName + ":" + id + ":Friend:no", user.systematic.getUserInfo());
+                            // Use mutex lock to protect the pool id and request pool
+                            try {
+                                mutex.lock();
+                                server.setPoolID(id + 1);
+                                server.addRequest(user_userName + ":" + id + ":Friend:no", user.systematic.getUserInfo());
+                            } finally {
+                                mutex.unlock();
+                            }
                             System.out.println(server.getRequestPool());
 
                             // send to the requestUser
@@ -391,11 +588,9 @@ public class ClientHandler extends  Thread{
             int count = 0;
             for(String i : incomingRequest.keySet()) {
                 // Get requestUser and responseUser
-                System.out.println(i);
                 String[] getRequestUser = i.split(":", 4);
-                String requestUser = getRequestUser[0];
-                String responseUser = incomingRequest.get(i).getUserName();
-                System.out.println(requestUser + " + " + responseUser);
+                String requestUserName = getRequestUser[0];
+                String responseUserName = incomingRequest.get(i).getUserName();
 
                 // Get type of request
                 String typeRequest = getRequestUser[2];
@@ -403,80 +598,90 @@ public class ClientHandler extends  Thread{
                 String dir = getRequestUser[3];
 
                 // Check if the responseUser is the user
-                if(user_userName.equals(responseUser)) {
+                if(user_userName.equals(responseUserName)) {
                     count += 1;
                     if(typeRequest.equals("Friend")) {
-                        String msg = requestUser + " wants to add you(Yes/No)";
+                        String msg = requestUserName + " wants to add you(Yes/No)";
                         out.println(msg);
                     }
                     else if(typeRequest.equals("File")) {
-                        String msg = requestUser + " send you a file(Yes/No)";
+                        String msg = requestUserName + " send you a file(Yes/No)";
                         out.println(msg);
                     }
-
+                    // Get the requestUser
+                    ClientHandler requestUser = null;
+                    for(ClientHandler user : userList) {
+                        if(user.systematic.getUserInfo().getUserName().equals(requestUserName)) {
+                            requestUser = user;
+                            System.out.println("Request user: " + requestUser.systematic.getUserInfo().getUserName());
+                            break;
+                        }
+                    }
                     String response = "";
                     while((response = in.readLine()) != null) {
                         if(response.equalsIgnoreCase("yes")) {
-                            for(ClientHandler user : userList) {
-                                if(user.systematic.getUserInfo().getUserName().equals(requestUser)) {
-                                    if(typeRequest.equals("Friend")) {
-                                        // add responseUser to requestUser list
-                                        user.friend.clientAddFriend(incomingRequest.get(i));
-                                        String accept = user_userName + " accept your request";
-                                        user.out.println(accept);
+                            switch (typeRequest) {
+                                case "Friend": {
+                                    // Add responseUser to requestUser list
+                                    requestUser.friendList.add(incomingRequest.get(i));
+                                    // Add all the friends to the xml file
+                                    requestUser.xml.Encoder(requestUser.userInfo, requestUser.friendList);
+                                    String accept = user_userName + " accept your request";
+                                    requestUser.out.println(accept);
 
-                                        // add requestUser to responseUser list
-                                        friend.clientAddFriend(user.systematic.getUserInfo());
-                                        String yes_msg = requestUser + " added to your list";
-                                        out.println(yes_msg);
-                                        break;
-                                    }
-                                    else if(typeRequest.equals("File")) {
-                                        // get the file transferred
-                                        String prefix = "sending:" + dir;
-                                        out.println(prefix);
-                                        //fileTransfer.transferFile(dir);
-                                        File file = new File(dir);
-                                        fileTransfer.transferFile(file);
-                                        // wait for the file to be transferred
-                                        String waitForResponse;
-                                        while((waitForResponse = in.readLine()) !=null) {
-                                            if(waitForResponse.equals("OK fileTransfer")){
-                                                out.println("Get file success");
-                                                break;
-                                            }
-                                        }
-                                        // send msg to the requestUser
-                                        String accept = user_userName + " accept the file";
-                                        user.out.println(accept);
-                                    }
+                                    // Add requestUser to responseUser list
+                                    friendList.add(requestUser.systematic.getUserInfo());
+                                    // Add all the friends to the xml file
+                                    xml.Encoder(userInfo, friendList);
+                                    String yes_msg = requestUserName + " added to your list";
+                                    out.println(yes_msg);
+                                    break;
+                                }
+                                case "File": {
+                                    // Get the file transferred
+                                    String prefix = "sending:" + dir;
+                                    out.println(prefix);
+                                    // Send the file to the user
+                                    File file = new File(dir);
+                                    fileTransfer = new MyRunnable(file);
+                                    new Thread(fileTransfer).start();
+//                                    // Wait for the file to be transferred
+//                                    String waitForResponse;
+//                                    while ((waitForResponse = in.readLine()) != null) {
+//                                        if (waitForResponse.equals("OK fileTransfer")) {
+//                                            out.println("Get file success");
+//                                            break;
+//                                        }
+//                                    }
+                                    // send msg to the requestUser
+                                    String accept = user_userName + " accept the file";
+                                    requestUser.out.println(accept);
+                                    break;
                                 }
                             }
                             break;
 
                         } else if(response.equalsIgnoreCase("no")) {
-                            for(ClientHandler user : userList) {
-                                if(user.systematic.getUserInfo().getUserName().equals(requestUser)) {
-                                    if(typeRequest.equals("Friend")) {
-                                        // send refuse msg to requestUser
-                                        String refuse = user_userName + " refuse your request";
-                                        user.out.println(refuse);
+                            switch (typeRequest) {
+                                case "Friend": {
+                                    // send refuse msg to requestUser
+                                    String refuse = user_userName + " refuse your request";
+                                    requestUser.out.println(refuse);
 
-                                        // send refuse msg to responseUser
-                                        String no_msg = "You declined " + requestUser + " request";
-                                        out.println(no_msg);
-                                        break;
-                                    }
-                                    else if(typeRequest.equals("File")) {
-                                        // send refuse msg to requestUser
-                                        String refuse = user_userName + " refuse your file";
-                                        user.out.println(refuse);
+                                    // send refuse msg to responseUser
+                                    String no_msg = "You declined " + requestUserName + " request";
+                                    out.println(no_msg);
+                                    break;
+                                }
+                                case "File": {
+                                    // send refuse msg to requestUser
+                                    String refuse = user_userName + " refuse your file";
+                                    requestUser.out.println(refuse);
 
-                                        // send refuse msg to responseUser
-                                        String no_msg = "You declined " + requestUser + " file";
-                                        out.println(no_msg);
-                                        break;
-                                    }
+                                    // send refuse msg to responseUser
+                                    String no_msg = "You declined " + requestUserName + " file";
+                                    out.println(no_msg);
+                                    break;
                                 }
                             }
                             break;
@@ -488,7 +693,13 @@ public class ClientHandler extends  Thread{
             }
             if(count > 0) {
                 // Clear all request pool
-                server.removeRequest(userInfo);
+                // User mutex lock to protect the request pool
+                try {
+                    mutex.lock();
+                    server.removeRequest(userInfo);
+                } finally {
+                    mutex.unlock();
+                }
                 System.out.println(server.getRequestPool());
             } else {
                 out.println("No request found");

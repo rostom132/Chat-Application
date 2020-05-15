@@ -8,13 +8,5 @@
    <string>thien</string>
   </void>
  </object>
- <int>1</int>
- <object class="com.muc.UserInfo">
-  <void property="passWord">
-   <string>khoa</string>
-  </void>
-  <void property="userName">
-   <string>khoa</string>
-  </void>
- </object>
+ <int>0</int>
 </java>
