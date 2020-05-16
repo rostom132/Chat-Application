@@ -2,10 +2,10 @@
 <java version="11.0.6" class="java.beans.XMLDecoder">
  <object class="internetServer.UserInfo">
   <void property="passWord">
-   <string>khoa</string>
+   <string>123</string>
   </void>
   <void property="userName">
-   <string>khoa</string>
+   <string>123</string>
   </void>
  </object>
  <int>0</int>

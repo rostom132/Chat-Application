@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <java version="11.0.6" class="java.beans.XMLDecoder">
- <object class="com.muc.UserInfo">
+ <object class="internetServer.UserInfo">
   <void property="passWord">
    <string>thien</string>
   </void>
