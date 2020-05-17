@@ -3,7 +3,7 @@ package internetServer;
 public class UserInfo {
     private String userName;
     private String passWord;
-    private String ip;
+    private String IP;
 
     public UserInfo() {
 
@@ -12,7 +12,7 @@ public class UserInfo {
     public UserInfo(String user_name, String pass, String ip) {
         this.userName = user_name;
         this.passWord = pass;
-        this.ip = ip;
+        this.IP = ip;
     }
 
     public String getUserName() {
@@ -20,7 +20,7 @@ public class UserInfo {
     }
 
     public void setUserName(String user_name) {
-        userName = user_name;
+        this.userName = user_name;
     }
 
     public String getPassWord() {
@@ -28,6 +28,14 @@ public class UserInfo {
     }
 
     public void setPassWord(String pass_word) {
-        passWord = pass_word;
+        this.passWord = pass_word;
+    }
+
+    public String getIP() {
+        return IP;
+    }
+
+    public void setIP(String ip) {
+        this.IP = ip;
     }
 }

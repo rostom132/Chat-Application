@@ -40,7 +40,7 @@ public class XML {
         return result;
     }
 
-    public void Encoder(UserInfo userInfo, ArrayList<UserInfo> friendList) throws IOException {
+    public void Encoder(UserInfo userInfo, ArrayList<FriendInfo> friendList) throws IOException {
         // Write all the information of user to xml file
         FileOutputStream os = null;
         String user_userName = userInfo.getUserName();
@@ -53,8 +53,8 @@ public class XML {
             Integer numOfFriend = friendList.size();
             encoder.writeObject(numOfFriend);
             // Write the info of each friend
-            for (UserInfo user : friendList) {
-                encoder.writeObject(user);
+            for (FriendInfo friend : friendList) {
+                encoder.writeObject(friend);
             }
             encoder.close();
             os.close();
@@ -63,7 +63,7 @@ public class XML {
         }
     }
 
-    public void Decoder(String file, ArrayList<UserInfo> friendList, String typeToRead) throws IOException {
+    public void Decoder(String file, ArrayList<FriendInfo> friendList, String typeToRead) throws IOException {
         FileInputStream is = null;
         try {
             is = new FileInputStream(new File(file));
@@ -78,7 +78,7 @@ public class XML {
                 Integer length = (Integer) decoder.readObject();
                 if(length != null) {
                     for (int i = 0; i < length; i++) {
-                        UserInfo friendInfo = (UserInfo) decoder.readObject();
+                        FriendInfo friendInfo = (FriendInfo) decoder.readObject();
                         // Write all the userFriend in the friend list
                         friendList.add(friendInfo);
                     }
@@ -98,7 +98,7 @@ public class XML {
         }
     }
 
-    public void readFileFriend(List<String> XMLFile, UserInfo userInfo, ArrayList<UserInfo> friendList) throws IOException {
+    public void readFileFriend(List<String> XMLFile, UserInfo userInfo, ArrayList<FriendInfo> friendList) throws IOException {
         if(XMLFile == null) return;
         String user_userName = userInfo.getUserName();
         String concact = user_userName + ".xml";
@@ -112,7 +112,7 @@ public class XML {
         }
     }
 
-    public void removeFileContainer(List<String> XMLFile, UserInfo userInfo, String removeName) throws IOException {
+    public void removeFriendContainer(List<String> XMLFile, UserInfo userInfo, String removeName) throws IOException {
         if(XMLFile == null) return;
         String user_userName = userInfo.getUserName();
         String concact = user_userName + ".xml";
@@ -150,17 +150,17 @@ public class XML {
             // Read of the length of friend list
             Integer length = (Integer) decoder.readObject();
             // Create new friendList array to store
-            ArrayList<UserInfo> temp = new ArrayList<UserInfo>();
+            ArrayList<FriendInfo> temp = new ArrayList<FriendInfo>();
             System.out.println("Temp before: ");
             for (int i = 0; i < length; i++) {
-                UserInfo friendInfo = (UserInfo) decoder.readObject();
-                if(!friendInfo.getUserName().equals(removeName)) {
+                FriendInfo friendInfo = (FriendInfo) decoder.readObject();
+                if(!friendInfo.getFriendName().equals(removeName)) {
                     temp.add(friendInfo);
                 }
             }
             System.out.println("Temp after: " + temp);
-            for(UserInfo user : temp) {
-                System.out.println(user.getUserName());
+            for(FriendInfo friend : temp) {
+                System.out.println(friend.getFriendName());
             }
             Encoder(userInfo, temp);
             is.close();

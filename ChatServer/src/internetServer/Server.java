@@ -19,6 +19,8 @@ public class Server extends Thread{
 
     private XML xml = new XML(userData);
 
+    public int syncTest = 0;
+
     public List<String> getXMLFile() {
         return XMLFile;
     }
@@ -33,11 +35,11 @@ public class Server extends Thread{
     }
 
     public void addUser(ServerHandler serverHandler) {
-        userList.add(serverHandler);
+        this.userList.add(serverHandler);
     }
 
     public void removeUser(ServerHandler serverHandler) {
-        userList.remove(serverHandler);
+        this.userList.remove(serverHandler);
     }
 
     // Methods for processing userInfo
@@ -46,7 +48,7 @@ public class Server extends Thread{
     }
 
     public void addUserInfo(String username, UserInfo userInfo) {
-        userData.put(username, userInfo);
+        this.userData.put(username, userInfo);
     }
 
     // Methods for processing request
@@ -63,7 +65,7 @@ public class Server extends Thread{
     }
 
     public void addRequest(String sender, UserInfo reveiver) {
-        requestPool.put(sender, reveiver);
+        this.requestPool.put(sender, reveiver);
     }
 
     public void removeUserInfo(String user_userName) {
