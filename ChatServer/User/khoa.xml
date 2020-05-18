@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="11.0.6" class="java.beans.XMLDecoder">
+ <object class="internetServer.UserInfo">
+  <void property="passWord">
+   <string>khoa</string>
+  </void>
+  <void property="userName">
+   <string>khoa</string>
+  </void>
+ </object>
+ <int>0</int>
+</java>
