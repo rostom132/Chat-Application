@@ -7,6 +7,9 @@
   <void property="passWord">
    <string>thien</string>
   </void>
+  <void property="port">
+   <int>23463</int>
+  </void>
   <void property="userName">
    <string>thien</string>
   </void>

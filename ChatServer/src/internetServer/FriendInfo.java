@@ -2,20 +2,30 @@ package internetServer;
 
 import java.io.Serializable;
 
-public class FriendInfo implements Serializable {
+public class FriendInfo implements Serializable{
 
     private String friendName;
     private boolean status;
     private String friendIP;
+    private  int port;
 
     public FriendInfo() {
 
     }
 
-    public FriendInfo(String friend_name, boolean status, String friend_IP) {
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public FriendInfo(String friend_name, boolean status, String friend_IP, int port) {
         this.friendName = friend_name;
         this.status = status;
         this.friendIP = friend_IP;
+        this.port = port;
     }
 
     public String getFriendName() {

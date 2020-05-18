@@ -27,9 +27,6 @@ public  class ServerHandler extends Thread{
     // Prototype of user data
     private UserInfo userInfo;
 
-    // Prototype of friend list
-    private ArrayList<FriendInfo> friendList = new ArrayList<FriendInfo>();
-
     // Initialize all class
     public  Systematic systematic = new Systematic();
     public  HandleUserRequest handleUserRequest = new HandleUserRequest();
@@ -97,7 +94,7 @@ public  class ServerHandler extends Thread{
                                 systematic.displayAllOnlineClients(server.getUserList());
                                 break;
                             case "friend":
-                                System.out.println(userInfo.getUserName() + ": " + friendList);
+                                System.out.println(userInfo.getUserName() + ": " + userInfo.getFriendList());
                                 break;
                             case "add":
                                 handlePoolRequest.addFriend(server.getUserList(),tokens);
@@ -134,7 +131,7 @@ public  class ServerHandler extends Thread{
         }
 
         public boolean isUserInFriendList(String name) {
-            for(FriendInfo friend : friendList) {
+            for(FriendInfo friend : userInfo.getFriendList()) {
                 if(friend.getFriendName().equals(name)) return true;
             }
             return false;
@@ -160,13 +157,13 @@ public  class ServerHandler extends Thread{
                 if(friendFound) {
                     int index = user.friend.getFriendIndex(user_username);
                     if(property.equals("Status")) {
-                        user.friendList.get(index).setStatus(status);
-                        System.out.println(user.friendList.get(index));
+                        user.userInfo.getFriendList().get(index).setStatus(status);
+                        System.out.println(user.userInfo.getFriendList().get(index));
                         user.dos.writeUTF("status " + user_username + " " + status);
                     }
                     else if(property.equals("IP")) {
-                        System.out.println(user.friendList.get(index));
-                        user.friendList.get(index).setFriendIP(user_ip);
+                        System.out.println(user.userInfo.getFriendList().get(index));
+                        user.userInfo.getFriendList().get(index).setFriendIP(user_ip);
                         user.dos.writeUTF("ip " + user_username + " " + user_ip);
                         return;
                     }
@@ -201,7 +198,8 @@ public  class ServerHandler extends Thread{
 
         public void sendCurrentFriendList() throws IOException {
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
-            oos.writeObject(friendList);
+            System.out.println(userInfo);
+            oos.writeObject(userInfo);
             System.out.println("Friend list sent");
         }
 
@@ -238,6 +236,7 @@ public  class ServerHandler extends Thread{
             if(tokens.length == 3) {
                 String newUserName = tokens[1];
                 String newPassword = tokens[2];
+                System.out.println(newUserName + newPassword);
                 boolean signUpSuccess = true;
                 for(String i : dataInfo.keySet()) {
                     if(newUserName.equals(i)) {
@@ -252,7 +251,7 @@ public  class ServerHandler extends Thread{
                         server.addUserInfo(newUserName, newUser);
                     mutex.unlock();
                     // Write the userInfo to the xml file
-                    xml.Encoder(newUser, friendList);
+                    xml.Encoder(newUser, newUser.getFriendList());
                     dos.writeUTF("OK signup");
                 } else {
                     dos.writeUTF("Please choose another username");
@@ -295,8 +294,8 @@ public  class ServerHandler extends Thread{
 
                     // Read all the friend of the current user
                     System.out.println(server.getXMLFile());
-                    xml.readFileFriend(server.getXMLFile(), userInfo, friendList);
-                    System.out.println("FriendList: " + friendList);
+                    xml.readFileFriend(server.getXMLFile(), userInfo, userInfo.getFriendList());
+                    System.out.println("FriendList: " + userInfo.getFriendList());
 
                     // Signal the local user to receiver friend list
                     dos.writeUTF("login");
@@ -337,7 +336,7 @@ public  class ServerHandler extends Thread{
             mutex.unlock();
 
             // Add all the friends to the xml file
-            xml.Encoder(userInfo, friendList);
+            xml.Encoder(userInfo, userInfo.getFriendList());
 
             // Broadcast online to friend list
             systematic.updateFriendProperty(server.getUserList(), false, "Status");
@@ -369,20 +368,20 @@ public  class ServerHandler extends Thread{
     class Friend {
 
         public void addFriend(FriendInfo new_friend) {
-            friendList.add(new_friend);
+            userInfo.getFriendList().add(new_friend);
         }
 
         public FriendInfo getFriendInfo(int index) {
-            FriendInfo friendFound = friendList.get(index);
+            FriendInfo friendFound = userInfo.getFriendList().get(index);
             return friendFound;
         }
 
 
         public int getFriendIndex(String friend_name) {
             int index = 0;
-            for(FriendInfo friend : friendList) {
+            for(FriendInfo friend : userInfo.getFriendList()) {
                 if(friend.getFriendName().equals(friend_name)) {
-                    index = friendList.indexOf(friend);
+                    index = userInfo.getFriendList().indexOf(friend);
                     break;
                 }
             }
@@ -391,9 +390,9 @@ public  class ServerHandler extends Thread{
         }
 
         public void removeFriendByName(String remove_name) {
-            for(FriendInfo friend : friendList) {
+            for(FriendInfo friend : userInfo.getFriendList()) {
                 if(friend.getFriendName().equals(remove_name)) {
-                    friendList.remove(friend);
+                    userInfo.getFriendList().remove(friend);
                     break;
                 }
             }
@@ -417,13 +416,13 @@ public  class ServerHandler extends Thread{
                     friend.removeFriendByName(removeName);
                     // Signal the local client to remove
                     dos.writeUTF("remove " + removeName);
-                    System.out.println(friendList);
+                    System.out.println(userInfo.getFriendList());
                     // Remove case: the removeUser is currently online
                     for(ServerHandler user : userList) {
                         if(user.userInfo.getUserName().equals(removeName)) {
                             // Remove the friend in the responseUser
                             user.friend.removeFriendByName(userInfo.getUserName());
-                            System.out.println(user.friendList);
+                            System.out.println(user.userInfo.getFriendList());
                             user.dos.writeUTF("remove " + userInfo.getUserName());
                             return;
                         }
@@ -592,18 +591,18 @@ public  class ServerHandler extends Thread{
                             switch (typeRequest) {
                                 case "Friend": {
                                     // Add response_user to request_user list
-                                    FriendInfo response_user = new FriendInfo(response_user_name, true, user_IP);
+                                    FriendInfo response_user = new FriendInfo(response_user_name, true, user_IP, userInfo.getPort());
                                     requestUser.friend.addFriend(response_user);
                                     // Signal the response_user to add to local list friend
-                                    requestUser.dos.writeUTF("add " + response_user_name + " true " + user_IP);
-                                    System.out.println(request_user_name + " " + requestUser.friendList);
+                                    requestUser.dos.writeUTF("add " + response_user_name + " true " + user_IP + " " + userInfo.getPort());
+                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
 
                                     // Add request_user to response_user list
-                                    FriendInfo request_user = new FriendInfo(request_user_name, true, requestUser.userInfo.getIP());
+                                    FriendInfo request_user = new FriendInfo(request_user_name, true, requestUser.userInfo.getIP(), requestUser.userInfo.getPort());
                                     friend.addFriend(request_user);
                                     // Signal the request_user to add to local list friend
-                                    dos.writeUTF("add " + request_user_name + " true " + requestUser.userInfo.getIP());
-                                    System.out.println(response_user_name + " " + friendList);
+                                    dos.writeUTF("add " + request_user_name + " true " + requestUser.userInfo.getIP() + " " + requestUser.userInfo.getPort());
+                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
                                     break;
                                 }
                                 case "File": {

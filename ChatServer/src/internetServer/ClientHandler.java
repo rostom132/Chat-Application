@@ -18,9 +18,8 @@ public class ClientHandler {
     private DataOutputStream dos;
     private Scanner keyboard;
 
-    private  ObjectInputStream ois;
-
     private ArrayList<FriendInfo> friend_List = new ArrayList<FriendInfo>();
+    private UserInfo user_info;
 
     private boolean endConnection = false;
 
@@ -45,15 +44,16 @@ public class ClientHandler {
 
     private void receiveFriendList() throws IOException, ClassNotFoundException {
         ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
-        friend_List = (ArrayList<FriendInfo>)ois.readObject();
-        System.out.println(friend_List);
+        user_info = (UserInfo) ois.readObject();
+        friend_List = user_info.getFriendList();
+        System.out.println(user_info.getPort());
     }
 
-    private void receiveFriendInfo(String friend_name, String statusStr, String friend_ip){
+    private void receiveFriendInfo(String friend_name, String statusStr, String friend_ip, int port){
         boolean status;
         if(statusStr.equals("true")) status = true;
         else status = false;
-        FriendInfo newFriend = new FriendInfo(friend_name, status, friend_ip);
+        FriendInfo newFriend = new FriendInfo(friend_name, status, friend_ip, port);
         addFriend(newFriend);
     }
 
@@ -98,7 +98,7 @@ public class ClientHandler {
     private void displayFriendList(){
         System.out.println(friend_List.size());
         for(int i = 0; i < friend_List.size(); i++){
-            System.out.println(friend_List.get(i).getFriendName()+" "+friend_List.get(i).getStatus()+" "+friend_List.get(i).getFriendIP());
+            System.out.println(friend_List.get(i).getFriendName()+" "+friend_List.get(i).getStatus()+" "+ friend_List.get(i).getFriendIP() + " "  + friend_List.get(i).getPort());
         }
     }
 
@@ -172,7 +172,8 @@ public class ClientHandler {
                                 String friend_name = tokens[1];
                                 String statusStr = tokens[2];
                                 String friend_ip = tokens[3];
-                                receiveFriendInfo(friend_name, statusStr, friend_ip);
+                                String port = tokens[4];
+                                receiveFriendInfo(friend_name, statusStr, friend_ip, Integer.parseInt(port));
                                 break;
 
                             case "remove":

@@ -1,9 +1,32 @@
 package internetServer;
 
-public class UserInfo {
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.concurrent.ThreadLocalRandom;
+
+public class UserInfo implements Serializable {
     private String userName;
     private String passWord;
     private String IP;
+    private ArrayList<FriendInfo> friend_list = new ArrayList<FriendInfo>();
+
+    public ArrayList<FriendInfo> getFriendList() {
+        return friend_list;
+    }
+
+    public void setFriendList(ArrayList<FriendInfo> friend_list) {
+        this.friend_list = friend_list;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    private int port;
 
     public UserInfo() {
 
@@ -13,6 +36,7 @@ public class UserInfo {
         this.userName = user_name;
         this.passWord = pass;
         this.IP = ip;
+        this.port = ThreadLocalRandom.current().nextInt(8000, 65000 + 1);
     }
 
     public String getUserName() {

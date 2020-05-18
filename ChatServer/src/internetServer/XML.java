@@ -43,7 +43,9 @@ public class XML {
     public void Encoder(UserInfo userInfo, ArrayList<FriendInfo> friendList) throws IOException {
         // Write all the information of user to xml file
         FileOutputStream os = null;
+        System.out.println("hello gello");
         String user_userName = userInfo.getUserName();
+        System.out.println(user_userName);
         try {
             os = new FileOutputStream(new File(userPath + "/" + user_userName + ".xml"));
             XMLEncoder encoder = new XMLEncoder(os);
@@ -51,6 +53,7 @@ public class XML {
             encoder.writeObject(userInfo);
             // Write the length of the friend list
             Integer numOfFriend = friendList.size();
+            System.out.println(friendList.size());
             encoder.writeObject(numOfFriend);
             // Write the info of each friend
             for (FriendInfo friend : friendList) {
