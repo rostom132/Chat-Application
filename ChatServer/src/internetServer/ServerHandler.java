@@ -100,7 +100,7 @@ public  class ServerHandler extends Thread{
                                 System.out.println("Server friendList: " + userInfo.getUserName() + ": " + userInfo.getFriendList().size());
                                 break;
                             case "add":
-                                handlePoolRequest.addFriend(server.getUserList(),tokens);
+                                handlePoolRequest.addFriendRequest(server.getUserList(),tokens);
                                 break;
                             case "remove":
                                 friend.clientRemoveFriend(server.getUserList(), tokens);
@@ -109,12 +109,7 @@ public  class ServerHandler extends Thread{
                                 handlePoolRequest.handleRequest(server.getRequestPool(), server.getUserList());
                                 break;
                             case "sendfile":
-                                handlePoolRequest.sendFile(server.getUserList() ,tokens);
-                                break;
-                            case "delete":
-                                handleUserRequest.deleteAccount(server.getUserList());
-                                state = "END";
-                                dos.writeUTF("end");
+                                handlePoolRequest.sendFileRequest(server.getUserList() ,tokens);
                                 break;
                             default:
                                 String notification = "Unknown command " + cmd;
@@ -343,27 +338,6 @@ public  class ServerHandler extends Thread{
             // Broadcast online to friend list
             systematic.updateFriendProperty(server.getUserList(), false, "Status");
         }
-
-        public void deleteAccount(ArrayList<ServerHandler> userList) throws IOException {
-            // Remove user from the current userList
-            mutex.lock();
-                server.removeUser(getClientHandler());
-            mutex.unlock();
-            // Remove this user from the friendList of online users
-            for(ServerHandler user : userList) {
-                user.friend.removeFriendByName(userInfo.getUserName());
-            }
-            // Remove in the XML file
-            for(String s : server.getUserInfo().keySet()) {
-                if(!s.equals(userInfo.getUserName())) {
-                    UserInfo userInfo = server.getUserInfo().get(s);
-                    xml.interactFriendContainer(server.getXMLFile(), userInfo, userInfo.getUserName(), false, "Remove");
-                }
-                else server.removeUserInfo(userInfo.getUserName());
-            }
-            // Delete the file
-            xml.removeUser(server.getXMLFile(), userInfo);
-        }
     }
 
     class Friend {
@@ -467,7 +441,7 @@ public  class ServerHandler extends Thread{
             return false;
         }
 
-        private void sendFile(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
+        private void sendFileRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
             if(tokens.length == 3) {
                 String dir = tokens[1];
                 String receiver = tokens[2];
@@ -483,17 +457,25 @@ public  class ServerHandler extends Thread{
                     dos.writeUTF("You already request to send the file to this user");
                     return;
                 }
+                // Check for the size of the file
+                File file_sent = new File(dir);
+                if((int)file_sent.length() == 0 || (int)file_sent.length() > 10000) { // 10 Mb
+                    dos.writeUTF("Error: file size is > 10Mb or = 0Mb");
+                    return;
+                }
                 // Find the receiver
                 for(ServerHandler user : userList) {
                     if(user.systematic.getUserInfo().getUserName().equals(receiver)) {
                         dos.writeUTF("File request has been sent");
-                        user.dos.writeUTF(user_userName + " sent you a file");
+                        // Send to the response user
+                        user.dos.writeUTF("new_request");
                         int id = server.getPoolID();
                         // Use mutex lock to protect the pool id and request pool
                         mutex.lock();
                             server.setPoolID(id + 1);
                             server.addRequest(user_userName + ":" + id + ":File:" + dir, user.systematic.getUserInfo());
                         mutex.unlock();
+                        break;
                     }
                 }
             } else {
@@ -501,7 +483,7 @@ public  class ServerHandler extends Thread{
             }
         }
 
-        private void addFriend(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
+        private void addFriendRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
             if (tokens.length == 2) {
                 String user_userName = userInfo.getUserName();
                 String friendToAdd = tokens[1];
@@ -528,9 +510,8 @@ public  class ServerHandler extends Thread{
                                 server.addRequest(user_userName + ":" + id + ":Friend:no", user.systematic.getUserInfo());
                             mutex.unlock();
                             dos.writeUTF("Request has been sent");
-                            // send to the requestUser
-                            // send to the responseUser
-                            user.dos.writeUTF("You got a new friend request");
+                            // Send to the response user
+                            user.dos.writeUTF("new_request");
                             return;
                         }
                     }
@@ -569,7 +550,7 @@ public  class ServerHandler extends Thread{
                     }
                     else if(typeRequest.equals("File")) {
 //                        dos.writeUTF(request_user_name + " send you a file(Yes/No))");
-                        dos.writeUTF("request_send " + request_user_name);
+                        dos.writeUTF("request_send " + request_user_name + " " + dir);
                     }
                     // Get the requestUser
                     ServerHandler requestUser = null;
@@ -588,6 +569,7 @@ public  class ServerHandler extends Thread{
                         if(response.equalsIgnoreCase("yes")) {
                             switch (typeRequest) {
                                 case "Friend": {
+                                    System.out.println("Yes Yes");
                                     // Add response_user to request_user list
                                     FriendInfo response_user = new FriendInfo(response_user_name, true, user_IP, userInfo.getPort());
                                     requestUser.friend.addFriend(response_user);
