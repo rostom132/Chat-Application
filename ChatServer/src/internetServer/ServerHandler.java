@@ -564,10 +564,12 @@ public  class ServerHandler extends Thread{
                 if(user_userName.equals(response_user_name)) {
                     count += 1;
                     if(typeRequest.equals("Friend")) {
-                        dos.writeUTF(request_user_name + " wants to add you(Yes/No)");
+//                        dos.writeUTF(request_user_name + " wants to add you(Yes/No)");
+                        dos.writeUTF("request_add " + request_user_name);
                     }
                     else if(typeRequest.equals("File")) {
-                        dos.writeUTF(request_user_name + " send you a file(Yes/No))");
+//                        dos.writeUTF(request_user_name + " send you a file(Yes/No))");
+                        dos.writeUTF("request_send " + request_user_name);
                     }
                     // Get the requestUser
                     ServerHandler requestUser = null;
