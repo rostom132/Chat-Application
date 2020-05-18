@@ -1,5 +1,7 @@
 package internetServer;
 
+import Java.Services.User.FriendInfo;
+import Java.Services.internetServer.UserInfo;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
@@ -25,7 +27,7 @@ public  class ServerHandler extends Thread{
     private String state = "LOGIN";
 
     // Prototype of user data
-    private UserInfo userInfo;
+    private UserInfo userInfo = new UserInfo();
 
     // Initialize all class
     public  Systematic systematic = new Systematic();
@@ -76,6 +78,7 @@ public  class ServerHandler extends Thread{
                                 break;
                             case "quit":
                                 state = "END";
+                                System.out.println("the end");
                                 dos.writeUTF("end");
                             default:
                                 dos.writeUTF("Please type signup or login or quit");
@@ -93,8 +96,8 @@ public  class ServerHandler extends Thread{
                             case "list":
                                 systematic.displayAllOnlineClients(server.getUserList());
                                 break;
-                            case "friend":
-                                System.out.println(userInfo.getUserName() + ": " + userInfo.getFriendList());
+                            case "friend_server":
+                                System.out.println("Server friendList: " + userInfo.getUserName() + ": " + userInfo.getFriendList().size());
                                 break;
                             case "add":
                                 handlePoolRequest.addFriend(server.getUserList(),tokens);
@@ -158,11 +161,9 @@ public  class ServerHandler extends Thread{
                     int index = user.friend.getFriendIndex(user_username);
                     if(property.equals("Status")) {
                         user.userInfo.getFriendList().get(index).setStatus(status);
-                        System.out.println(user.userInfo.getFriendList().get(index));
                         user.dos.writeUTF("status " + user_username + " " + status);
                     }
                     else if(property.equals("IP")) {
-                        System.out.println(user.userInfo.getFriendList().get(index));
                         user.userInfo.getFriendList().get(index).setFriendIP(user_ip);
                         user.dos.writeUTF("ip " + user_username + " " + user_ip);
                         return;
@@ -198,14 +199,13 @@ public  class ServerHandler extends Thread{
 
         public void sendCurrentFriendList() throws IOException {
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
-            System.out.println(userInfo);
+            System.out.println("Send list friend with size: " + userInfo.getFriendList());
+            System.out.println(userInfo.getPort());
             oos.writeObject(userInfo);
-            System.out.println("Friend list sent");
         }
 
         public void transferFile(File my_file) throws IOException {
             if (!my_file.exists() || !my_file.isFile()) return;
-            System.out.println(my_file.getName());
             int fileSize;
             fileSize = (int)my_file.length();
             System.out.println(fileSize);
@@ -236,7 +236,7 @@ public  class ServerHandler extends Thread{
             if(tokens.length == 3) {
                 String newUserName = tokens[1];
                 String newPassword = tokens[2];
-                System.out.println(newUserName + newPassword);
+                System.out.println("New signup: " + newUserName + newPassword);
                 boolean signUpSuccess = true;
                 for(String i : dataInfo.keySet()) {
                     if(newUserName.equals(i)) {
@@ -251,7 +251,7 @@ public  class ServerHandler extends Thread{
                         server.addUserInfo(newUserName, newUser);
                     mutex.unlock();
                     // Write the userInfo to the xml file
-                    xml.Encoder(newUser, newUser.getFriendList());
+                    xml.Encoder(newUser);
                     dos.writeUTF("OK signup");
                 } else {
                     dos.writeUTF("Please choose another username");
@@ -273,8 +273,6 @@ public  class ServerHandler extends Thread{
                 // Check inputInfo with dataInfo
                 for(String i : dataInfo.keySet()) {
                     if(i.equals(input_userName) && (dataInfo.get(i)).getPassWord().equals(input_passWord)) {
-                        userInfo = dataInfo.get(i);
-                        System.out.println(userInfo);
                         isCreated = true;
                     }
                 }
@@ -288,14 +286,18 @@ public  class ServerHandler extends Thread{
 
                 // Display result and handle login functions
                 if(isCreated && !isDupplicated) {
-//                    System.out.println(server.syncTest);
+                    // Set the information to the user
+                    userInfo.setUserName(input_userName);
+                    userInfo.setPassWord(input_passWord);
+                    userInfo.setIP(clientSocket.getInetAddress().toString());
+                    userInfo.setPort(server.getPort(input_userName));
                     // Send msg to server
                     System.out.println("User " + userInfo.getUserName() + " has login " + new Date());
 
                     // Read all the friend of the current user
                     System.out.println(server.getXMLFile());
+
                     xml.readFileFriend(server.getXMLFile(), userInfo, userInfo.getFriendList());
-                    System.out.println("FriendList: " + userInfo.getFriendList());
 
                     // Signal the local user to receiver friend list
                     dos.writeUTF("login");
@@ -336,7 +338,7 @@ public  class ServerHandler extends Thread{
             mutex.unlock();
 
             // Add all the friends to the xml file
-            xml.Encoder(userInfo, userInfo.getFriendList());
+            xml.Encoder(userInfo);
 
             // Broadcast online to friend list
             systematic.updateFriendProperty(server.getUserList(), false, "Status");
@@ -359,7 +361,6 @@ public  class ServerHandler extends Thread{
                 }
                 else server.removeUserInfo(userInfo.getUserName());
             }
-            System.out.println(server.getUserInfo());
             // Delete the file
             xml.removeUser(server.getXMLFile(), userInfo);
         }
@@ -385,7 +386,6 @@ public  class ServerHandler extends Thread{
                     break;
                 }
             }
-            System.out.println(index);
             return index;
         }
 
@@ -416,13 +416,11 @@ public  class ServerHandler extends Thread{
                     friend.removeFriendByName(removeName);
                     // Signal the local client to remove
                     dos.writeUTF("remove " + removeName);
-                    System.out.println(userInfo.getFriendList());
                     // Remove case: the removeUser is currently online
                     for(ServerHandler user : userList) {
                         if(user.userInfo.getUserName().equals(removeName)) {
                             // Remove the friend in the responseUser
                             user.friend.removeFriendByName(userInfo.getUserName());
-                            System.out.println(user.userInfo.getFriendList());
                             user.dos.writeUTF("remove " + userInfo.getUserName());
                             return;
                         }
@@ -472,7 +470,6 @@ public  class ServerHandler extends Thread{
         private void sendFile(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
             if(tokens.length == 3) {
                 String dir = tokens[1];
-                System.out.println(dir);
                 String receiver = tokens[2];
                 String user_userName = userInfo.getUserName();
                 // Check if you send to yourself
@@ -531,7 +528,6 @@ public  class ServerHandler extends Thread{
                                 server.addRequest(user_userName + ":" + id + ":Friend:no", user.systematic.getUserInfo());
                             mutex.unlock();
                             dos.writeUTF("Request has been sent");
-                            System.out.println(server.getRequestPool());
                             // send to the requestUser
                             // send to the responseUser
                             user.dos.writeUTF("You got a new friend request");
@@ -595,24 +591,22 @@ public  class ServerHandler extends Thread{
                                     requestUser.friend.addFriend(response_user);
                                     // Signal the response_user to add to local list friend
                                     requestUser.dos.writeUTF("add " + response_user_name + " true " + user_IP + " " + userInfo.getPort());
-                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
+//                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
 
                                     // Add request_user to response_user list
                                     FriendInfo request_user = new FriendInfo(request_user_name, true, requestUser.userInfo.getIP(), requestUser.userInfo.getPort());
                                     friend.addFriend(request_user);
                                     // Signal the request_user to add to local list friend
                                     dos.writeUTF("add " + request_user_name + " true " + requestUser.userInfo.getIP() + " " + requestUser.userInfo.getPort());
-                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
+//                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
                                     break;
                                 }
                                 case "File": {
                                     // Get the file transferred
                                     String prefix = "sending " + dir;
-                                    System.out.println(prefix);
                                     dos.writeUTF(prefix);
                                     // Send the file to the user
                                     File file = new File(dir);
-                                    System.out.println(file);
                                     systematic.transferFile(file);
                                     break;
                                 }
@@ -649,7 +643,6 @@ public  class ServerHandler extends Thread{
                 mutex.lock();
                     server.removeRequest(userInfo);
                 mutex.unlock();
-                System.out.println(server.getRequestPool());
             } else {
                 dos.writeUTF("No request found");
             }

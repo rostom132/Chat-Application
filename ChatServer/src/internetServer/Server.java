@@ -1,5 +1,7 @@
 package internetServer;
 
+import Java.Services.internetServer.UserInfo;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,7 +16,9 @@ public class Server extends Thread{
 
     private List<String> XMLFile = null;
     private ArrayList<ServerHandler> userList = new ArrayList<ServerHandler>();
+
     private HashMap<String, UserInfo> userData = new HashMap<String, UserInfo>();
+
     private HashMap<String, UserInfo> requestPool = new HashMap<String, UserInfo>();
 
     private XML xml = new XML(userData);
@@ -72,9 +76,18 @@ public class Server extends Thread{
         Iterator<Map.Entry<String, UserInfo>> iterator = userData.entrySet().iterator();
         while(iterator.hasNext()) {
             Map.Entry<String, UserInfo> entryPoint = iterator.next();
-            System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
             if(entryPoint.getKey().equals(user_userName)) iterator.remove();
         }
+    }
+
+    public int getPort(String user_name) {
+        int port = 0;
+        for(String s : userData.keySet()) {
+            if(s.equals(user_name)) {
+                port = userData.get(s).getPort();
+            }
+        }
+        return port;
     }
 
     public void removeRequest(UserInfo receiver) {

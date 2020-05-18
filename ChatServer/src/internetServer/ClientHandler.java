@@ -1,5 +1,7 @@
 package internetServer;
 
+import Java.Services.User.FriendInfo;
+import Java.Services.internetServer.UserInfo;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
@@ -46,6 +48,7 @@ public class ClientHandler {
         ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         user_info = (UserInfo) ois.readObject();
         friend_List = user_info.getFriendList();
+        System.out.println("Friend list size: " + friend_List.size());
         System.out.println(user_info.getPort());
     }
 
@@ -130,21 +133,24 @@ public class ClientHandler {
                 try {
                     String cmd = keyboard.nextLine();
                     String[] tokens = StringUtils.split(cmd);
-                    String cmd_key = tokens[0];
-                    switch (cmd_key) {
-                        case "search":
-                            String searchName = tokens[1];
-                            searchByName(searchName);
-                            break;
-                        case "friend": // View the friend list
-                            displayFriendList();
-                            break;
-                        case "quit":
-                            dos.writeUTF(cmd);
-                            return;
-                        default:
-                            dos.writeUTF(cmd);
-                            break;
+                    if(tokens.length > 0 && tokens != null) {
+                        String cmd_key = tokens[0];
+                        switch (cmd_key) {
+                            case "search":
+                                String searchName = tokens[1];
+                                searchByName(searchName);
+                                break;
+                            case "friend": // View the friend list
+                                displayFriendList();
+                                break;
+                            case "quit":
+                                System.out.println("Quitting");
+                                dos.writeUTF(cmd);
+                                return;
+                            default:
+                                dos.writeUTF(cmd);
+                                break;
+                        }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -173,6 +179,7 @@ public class ClientHandler {
                                 String statusStr = tokens[2];
                                 String friend_ip = tokens[3];
                                 String port = tokens[4];
+                                System.out.println(friend_name + ":" + statusStr + ":" + friend_ip + ":" + port);
                                 receiveFriendInfo(friend_name, statusStr, friend_ip, Integer.parseInt(port));
                                 break;
 

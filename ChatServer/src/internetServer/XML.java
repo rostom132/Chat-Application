@@ -1,5 +1,8 @@
 package internetServer;
 
+import Java.Services.User.FriendInfo;
+import Java.Services.internetServer.UserInfo;
+
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.*;
@@ -40,26 +43,17 @@ public class XML {
         return result;
     }
 
-    public void Encoder(UserInfo userInfo, ArrayList<FriendInfo> friendList) throws IOException {
+    public void Encoder(UserInfo userInfo) throws IOException {
         // Write all the information of user to xml file
         FileOutputStream os = null;
-        System.out.println("hello gello");
         String user_userName = userInfo.getUserName();
+        int list_friend_size = userInfo.getFriendList().size();
         System.out.println(user_userName);
         try {
             os = new FileOutputStream(new File(userPath + "/" + user_userName + ".xml"));
             XMLEncoder encoder = new XMLEncoder(os);
             // Write the userInfo
             encoder.writeObject(userInfo);
-            // Write the length of the friend list
-            Integer numOfFriend = friendList.size();
-            System.out.println(friendList.size());
-            encoder.writeObject(numOfFriend);
-            // Write the info of each friend
-            for (FriendInfo friend : friendList) {
-                System.out.println(friend.getFriendName());
-                encoder.writeObject(friend);
-            }
             encoder.close();
             os.close();
         } catch (FileNotFoundException e) {
@@ -74,17 +68,23 @@ public class XML {
             XMLDecoder decoder = new XMLDecoder(is);
             // Read the userInfo
             UserInfo userInfo = (UserInfo) decoder.readObject();
+            int friend_list_length =  userInfo.getFriendList().size();
+            System.out.println("XML Notification: " + friend_list_length);
             // Write all the userInfo to the hashmap
             if(typeToRead.equals("Info")) {
-                userData.put(userInfo.getUserName(), userInfo);
+                UserInfo user_hashmap = new UserInfo();
+                user_hashmap.setUserName(userInfo.getUserName());
+                user_hashmap.setPassWord(userInfo.getPassWord());
+                user_hashmap.setPort(userInfo.getPort());
+                userData.put(userInfo.getUserName(), user_hashmap);
             } else {
                 // Get the length of the friend list
-                Integer length = (Integer) decoder.readObject();
-                if(length != null) {
-                    for (int i = 0; i < length; i++) {
-                        FriendInfo friendInfo = (FriendInfo) decoder.readObject();
+                if(friend_list_length > 0) {
+                    for (FriendInfo friend : userInfo.getFriendList()) {
                         // Write all the userFriend in the friend list
-                        friendList.add(friendInfo);
+                        System.out.println("XML Notification: " + friend.getFriendName()+ " " + friendList.size());
+                        friendList.add(friend);
+                        System.out.println("After add:" + friendList.size());
                     }
                 }
             }
@@ -150,32 +150,30 @@ public class XML {
         try {
             is = new FileInputStream(new File(file));
             XMLDecoder decoder = new XMLDecoder(is);
-            // Pass the read the userInfo
+            // Read the userInfo
             UserInfo userInfo = (UserInfo) decoder.readObject();
-            // Read of the length of friend list
-            Integer length = (Integer) decoder.readObject();
             // Create new friendList array to store
-            ArrayList<FriendInfo> temp = new ArrayList<FriendInfo>();
+            ArrayList<FriendInfo> new_friend_list = new ArrayList<FriendInfo>();
             System.out.println("Temp before: ");
-            for (int i = 0; i < length; i++) {
-                FriendInfo friendInfo = (FriendInfo) decoder.readObject();
-                if(!friendInfo.getFriendName().equals(removeName)) {
-                    temp.add(friendInfo);
+            for(FriendInfo friend : userInfo.getFriendList()) {
+                if(!friend.getFriendName().equals(removeName)) {
+                    new_friend_list.add(friend);
                 }
-                else if(friendInfo.getFriendName().equals(removeName)){
+                else if(friend.getFriendName().equals(removeName)) {
                     if(interact_type.equals("Update")) {
-                        friendInfo.setStatus(status);
-                        temp.add(friendInfo);
-                    } else continue;
+                        friend.setStatus(status);
+                        new_friend_list.add(friend);
+                    }
                 }
             }
+            userInfo.setFriendList(new_friend_list);
             System.out.println("Temp array after: " + interact_type);
-            for(FriendInfo friend : temp) {
-                System.out.print(friend.getFriendName() + ":" + friend.getStatus() + ":" + friend.getFriendIP());
+            for(FriendInfo friend : new_friend_list) {
+                System.out.print(friend.getFriendName() + ":" + friend.getStatus() + ":" + friend.getFriendIP() + ":" + friend.getPort());
                 System.out.println(" + ");
             }
             System.out.print("\n");
-            Encoder(userInfo, temp);
+            Encoder(userInfo);
             is.close();
             decoder.close();
         } catch(FileNotFoundException e) {
