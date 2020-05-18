@@ -54,6 +54,7 @@ public class XML {
             encoder.writeObject(numOfFriend);
             // Write the info of each friend
             for (FriendInfo friend : friendList) {
+                System.out.println(friend.getFriendName());
                 encoder.writeObject(friend);
             }
             encoder.close();
@@ -112,14 +113,14 @@ public class XML {
         }
     }
 
-    public void removeFriendContainer(List<String> XMLFile, UserInfo userInfo, String removeName) throws IOException {
+    public void interactFriendContainer(List<String> XMLFile, UserInfo userInfo, String removeName, boolean status, String interact_type) throws IOException {
         if(XMLFile == null) return;
         String user_userName = userInfo.getUserName();
         String concact = user_userName + ".xml";
         for (String s : XMLFile) {
             if(s.contains(concact)) {
                 System.out.println(s);
-                removeFriend(s, removeName);
+                interactFriend(s, removeName, status, interact_type);
                 break;
             }
         }
@@ -140,7 +141,8 @@ public class XML {
         }
     }
 
-    public void removeFriend(String file, String removeName) throws IOException {
+    public void interactFriend(String file, String removeName, boolean status, String interact_type) throws IOException {
+        System.out.println("Begin XML operations");
         FileInputStream is = null;
         try {
             is = new FileInputStream(new File(file));
@@ -157,11 +159,19 @@ public class XML {
                 if(!friendInfo.getFriendName().equals(removeName)) {
                     temp.add(friendInfo);
                 }
+                else if(friendInfo.getFriendName().equals(removeName)){
+                    if(interact_type.equals("Update")) {
+                        friendInfo.setStatus(status);
+                        temp.add(friendInfo);
+                    } else continue;
+                }
             }
-            System.out.println("Temp after: " + temp);
+            System.out.println("Temp array after: " + interact_type);
             for(FriendInfo friend : temp) {
-                System.out.println(friend.getFriendName());
+                System.out.print(friend.getFriendName() + ":" + friend.getStatus() + ":" + friend.getFriendIP());
+                System.out.println(" + ");
             }
+            System.out.print("\n");
             Encoder(userInfo, temp);
             is.close();
             decoder.close();
