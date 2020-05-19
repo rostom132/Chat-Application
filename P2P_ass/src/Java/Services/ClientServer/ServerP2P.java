@@ -37,6 +37,7 @@ public class ServerP2P {
         System.out.println(name + " " + current_client.getOwnerInfo().getIP() + " " + current_client.getOwnerInfo().getPort());
         this.user_remote = user_remote;
         this.user_remote.currentClient = current_client;
+        this.user_remote.currentClient.getState().addListener(this.user_remote.mainUIcontrol);
         this.port = this.user_remote.currentClient.getOwnerInfo().getPort();
         System.out.println(port);
         serverPeer = new ServerSocket(port);
@@ -61,24 +62,21 @@ public class ServerP2P {
             while (running) {
                 try {
                     Socket s = serverPeer.accept();
-                    System.out.println("Conneted to " + s);
                     DataInputStream dis = new DataInputStream(s.getInputStream());
                     DataOutputStream dos = new DataOutputStream(s.getOutputStream());
                     String guest_name = dis.readUTF();
-                    System.out.println("Do you want to chat with " + guest_name + "(Accept or Deny)?");
-//
                     Thread confirm = new Thread(new Runnable()
                     {
                         @Override
                         public void run() {
-                            boolean Confirm = confirmBox.checkConfirm(guest_name);
+                            boolean Confirm = confirmBox.checkConfirm("New chat request!", "Do you want to chat with "+ guest_name + " ?");
                             if (Confirm){
                                 Platform.runLater(() -> {
                                     user_remote.newChatRoom(guest_name,s,dis,dos);
                                 });
-                                System.out.println("Start chatting with " + guest_name);
                                 try {
                                     dos.writeUTF("Accept");
+                                    dos.flush();
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -87,6 +85,7 @@ public class ServerP2P {
                             else {
                                 try {
                                     dos.writeUTF("Deny");
+                                    dos.flush();
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -100,7 +99,6 @@ public class ServerP2P {
                     break;
                 }
             }
-            System.out.println("end Chattttttttttttt");
             try {
                 serverPeer.close();
             } catch (IOException e) {

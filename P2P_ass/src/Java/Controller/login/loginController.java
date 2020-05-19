@@ -68,7 +68,7 @@ public class loginController implements Initializable {
             else if(t1.equals(7)){
                 name = "";
                 pass = "";
-                notiBox.checkNoti("Wrong Password");
+                notiBox.displayNoti("Wrong Password or Username", "Please try again!");
             }
         }
     };
@@ -83,6 +83,8 @@ public class loginController implements Initializable {
     public void Close(ActionEvent event){
         stage = (Stage) ((Button)event.getSource()).getScene().getWindow();
         stage.close();
+        Platform.exit();
+        System.exit(0);
     }
 
     public  void temp(){
@@ -96,7 +98,7 @@ public class loginController implements Initializable {
     }
 
     @FXML
-    public void signup(ActionEvent event){
+    public void signup(ActionEvent event) throws IOException {
         name = user_name.getText();
         pass = password.getText();
         System.out.println(name + pass);
@@ -110,7 +112,7 @@ public class loginController implements Initializable {
         }
     }
 
-    public void logIn() {
+    public void logIn() throws IOException {
         name = user_name.getText();
         pass = password.getText();
         currentClient.sendMess("login " +name + " " + pass);

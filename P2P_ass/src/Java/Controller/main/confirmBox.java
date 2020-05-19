@@ -16,11 +16,11 @@ public class  confirmBox {
 
     //Create variable
     static boolean answer;
-    public static boolean checkConfirm (String guest_name) {
+    public static boolean checkConfirm (String title,String mess) {
         final FutureTask query = new FutureTask(new Callable() {
             @Override
             public Object call() throws Exception {
-                return confirmBox.display("New message", "Do you want to chat with " + guest_name);
+                return confirmBox.display(title, mess);
             }
         });
         Platform.runLater(query);

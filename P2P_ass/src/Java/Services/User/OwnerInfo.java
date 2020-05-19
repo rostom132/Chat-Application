@@ -13,7 +13,7 @@ public class OwnerInfo {
     private String userName;
     private String IP;
     private int port;
-    private ObservableList<chatRoom> friend_list = FXCollections.observableArrayList(chat -> new Observable[]{chat.getNumUnseenMess()});
+    private ObservableList<chatRoom> friend_list = FXCollections.observableArrayList(chat -> new Observable[]{chat.getNumUnseenMess(), chat.getOnline()});
 
     public OwnerInfo() {
 

@@ -2,18 +2,14 @@ package Java.Controller.main;
 
 import Java.Controller.chat.chatRoom;
 import Java.Controller.dragScene;
+import Java.Controller.login.loginController;
 import Java.Services.ClientServer.ClientHandler;
-import Java.Services.ClientServer.ServerP2P;
-import Java.Services.User.FriendInfo;
-import animatefx.animation.FadeInDownBig;
+//import animatefx.animation.FadeInDownBig;
 import javafx.application.Platform;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -29,13 +25,16 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
-import java.util.ArrayList;
+import java.net.UnknownHostException;
 import java.util.ResourceBundle;
 
 
@@ -73,22 +72,40 @@ public class mainUIController implements Initializable {
         }
     };
 
-    ChangeListener<Number> login_confirm = new ChangeListener<Number>() {
+    public ChangeListener<Number> mainUIcontrol = new ChangeListener<Number>() {
         @Override
         public void changed(ObservableValue<? extends Number> observable, Number integer, Number t1) {
-            switch(t1.intValue()){
-                case 1:
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                case 4:
-                    break;
-                case 5:
-                    break;
-                case 6:
-                    break;
+//             else if(t1.equals(2)){
+//                 notiBox.displayNoti("Add success!" , currentClient.getOwnerInfo().getFriendList().get(currentClient.getOwnerInfo().getFriendList().size()-1).getGuestName() + " accept your friend request!");
+//             }
+//             else if(t1.equals(3)){}
+//             else if(t1.equals(4)){}
+//             else if(t1.equals(5)){}
+//             else if(t1.equals(6)){}
+//             else if(t1.equals(7)){
+//                 if (confirmBox.checkConfirm("New Friend request", "Do you want to add " + currentClient.request_add_user +" ?"))
+//                     currentClient.sendMess("answer_add " + currentClient.request_add_user + " yes");
+//                 else
+//                     currentClient.sendMess("answer_add " + currentClient.request_add_user + " no");
+//                 this.currentClient.state
+//             }
+//             else if(t1.equals(8)){}
+
+             switch (t1.intValue()){
+                 case 2:
+                     notiBox.displayNoti("Add success!" , currentClient.getOwnerInfo().getFriendList().get(currentClient.getOwnerInfo().getFriendList().size()-1).getGuestName() + " accept your friend request!");
+                     currentClient.state_Client.set(1);
+                     break;
+                 case 7:
+                     if (confirmBox.checkConfirm("New Friend request", "Do you want to add " + currentClient.request_add_user +" ?")) {
+                         currentClient.sendMess("answer_add " + currentClient.request_add_user + " yes");
+                     }
+                     else {
+                         currentClient.sendMess("answer_add " + currentClient.request_add_user + " no");
+                     }
+                     break;
+
+
             }
         }
     };
@@ -101,27 +118,31 @@ public class mainUIController implements Initializable {
     }
 
     @FXML
-    public void handleAddFriend(MouseEvent arg){
+    public void handleAddFriend(MouseEvent arg) throws IOException {
         String temp = addFriendBox.addFriend();
-        System.out.println(temp);
-    }
-
-    @FXML
-    public void handleAddFriendEnter(KeyEvent event){
-        if (event.getCode() == KeyCode.ENTER) {
-            String temp = addFriendBox.addFriend();
-            System.out.println(temp);
-        }
+        System.out.println("add " + temp);
+        currentClient.sendMess("add " + temp);
     }
 
     @FXML
     public void handlelogout(MouseEvent arg) throws IOException{
+        currentClient.sendMess("quit");
         Server_online_status.set(false);
         for (chatRoom friend:currentClient.getOwnerInfo().getFriendList()){
             if(friend.getChatAccept().get())friend.offRoom();
         }
         FXMLLoader login = new FXMLLoader(getClass().getResource("/Resources/views/LoginUI.fxml"));
         Parent root1 = (Parent) login.load();
+        loginController controllerfirst = login.getController();
+        this.currentClient.getState().removeListener(mainUIcontrol);
+        InetAddress ip = null;
+        try {
+            ip = InetAddress.getByName("127.0.0.1");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        controllerfirst.currentClient =  new ClientHandler(ip, 8818);
+        controllerfirst.currentClient.getState().addListener(controllerfirst.login_confirm);
         Stage mainScene = (Stage) (Stage) ((Node)arg.getSource()).getScene().getWindow();
         mainScene.setScene(new Scene(root1));
         dragScene.dragWindow(root1,mainScene);
@@ -157,34 +178,63 @@ public class mainUIController implements Initializable {
         }
     }
 
+    @FXML
+    public void  handleSendFile(MouseEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        configureFileChooser(fileChooser);
+        File file = fileChooser.showOpenDialog((Stage) ((Node)event.getSource()).getScene().getWindow());
+    }
+
+    private static void configureFileChooser(FileChooser fileChooser) {
+        fileChooser.setTitle("Choose File to send");
+        fileChooser.setInitialDirectory(
+                new File(System.getProperty("user.home"))
+        );
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Images", "*.*"),
+                new FileChooser.ExtensionFilter("JPG", "*.jpg"),
+                new FileChooser.ExtensionFilter("PNG", "*.png")
+        );
+    }
+
     static class Cell extends ListCell<chatRoom>{
-        ImageView online_icon_pallet = new ImageView(new Image("Resources/images/omg.png",12,12,false,false));
+        ImageView online_icon_pallet = new ImageView(new Image("Resources/images/user.png",22,22,false,false));
         ImageView user_pallet =  new ImageView(new Image("Resources/images/user.png",22,22,false,false));
+        Pane offline = new Pane();
         Label user_name = new Label();
         Pane blank = new Pane();
         Label receive_mess = new Label();
         VBox number = new VBox();
 //        BorderPane container = new BorderPane();
         HBox box = new HBox();
-
         public Cell(){
             super();
             number.getChildren().addAll(online_icon_pallet,receive_mess);
             box.getChildren().addAll(user_pallet,user_name,blank,number);
+
             box.setHgrow(blank, Priority.ALWAYS);
         }
 
         public void updateItem(chatRoom friend, boolean empty){
             super.updateItem(friend,empty);
-            setText(null);
-            setGraphic(null);
-
+            Platform.runLater(() ->{
+                setText(null);
+                setGraphic(null);
+            });
             if(friend!= null && !empty){
                 receive_mess.setText(String.valueOf(friend.getNumUnseenMess().get()));
                 receive_mess.setStyle("-fx-text-fill: white; -fx-font-size: 10px");
                 user_name.setText(friend.getGuestName());
                 user_name.setStyle("-fx-text-fill: white; -fx-font-size: 12px");
-                setGraphic(box);
+                if (friend.getOnline().get()) {
+                    online_icon_pallet.setImage(new Image("Resources/images/omg.png",12,12,false,false));
+                }else {
+                    online_icon_pallet.setImage(new Image("Resources/images/iconoff.png",12,12,false,false));
+                }
+                Platform.runLater(() ->{
+                    setGraphic(box);
+                });
+
             }
         }
     }
@@ -204,6 +254,7 @@ public class mainUIController implements Initializable {
 //    }
 
     public void newChatRoom(String user_name, Socket connection, DataInputStream data_in, DataOutputStream data_out){
+        int index_chatroom = 0;
         for(chatRoom temp_room:currentClient.getOwnerInfo().getFriendList()){
             if (temp_room.getGuestName().equals(user_name)){
                 temp_room.getStartChat(connection,data_in,data_out);
@@ -221,8 +272,11 @@ public class mainUIController implements Initializable {
                     messView.setCenter(currentUser.requestChat);
                 }
                 changeFriend(currentUser.getGuestName());
+                listOfFriends.scrollTo(index_chatroom);
+                listOfFriends.getSelectionModel().select(index_chatroom);
                 break;
             }
+            index_chatroom ++;
         }
     }
 
@@ -237,7 +291,7 @@ public class mainUIController implements Initializable {
         friend_name.setText(name);
         friend_name.setStyle("-fx-background-color: #7c68e7; -fx-background-radius: 0");
         friend_name.setAlignment(Pos.CENTER);
-        new FadeInDownBig(friend_name).play();
+//        new FadeInDownBig(friend_name).play();
     }
 
     public BooleanProperty getServerOnlineStatus(){

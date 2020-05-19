@@ -24,7 +24,7 @@ public class Main1 extends Application {
         loginController controllerfirst = loader.getController();
         InetAddress ip = null;
         try {
-            ip = InetAddress.getByName("192.168.0.106");
+            ip = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }

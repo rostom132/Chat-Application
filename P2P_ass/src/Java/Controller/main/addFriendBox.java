@@ -2,6 +2,8 @@ package Java.Controller.main;
 
 import javafx.application.Platform;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.*;
 import javafx.scene.*;
@@ -41,6 +43,12 @@ public class addFriendBox{
         });
 
         VBox layout = new VBox(10);
+        layout.addEventHandler(KeyEvent.KEY_PRESSED, ev -> {
+            if (ev.getCode() == KeyCode.ENTER) {
+                ok.fire();
+                ev.consume();
+            }
+        });
         //Add buttons
         layout.getChildren().addAll(label,name,ok );
         layout.setAlignment(Pos.CENTER);

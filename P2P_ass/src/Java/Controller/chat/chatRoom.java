@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static Java.Controller.chat.messDirection.SEND;
 import static Java.Controller.chat.messDirection.RECEIVE;
-import static Java.Controller.main.notiBox.checkNoti;
+import static Java.Controller.main.notiBox.displayNoti;
 
 
 public class chatRoom {
@@ -83,6 +83,10 @@ public class chatRoom {
         this.online.set(online);
     }
 
+    public BooleanProperty getOnline() {
+        return this.online;
+    }
+
     public void setGuestIP(String ip){
         this.guest_ip = ip;
     }
@@ -112,11 +116,11 @@ public class chatRoom {
             this.requestChat.setOnAction(requestChatting);
         });
         if (status.equals("Can't Connet!")) {
-            checkNoti(guest_name + " is not Online!");
+            displayNoti("Cannot connet",guest_name + " is not Online!");
         } else if (status.equals(("Denied!"))) {
-            checkNoti("Request denied from " + guest_name);
+            displayNoti("Deny","Request denied from " + guest_name);
         }else{
-            checkNoti(guest_name + " is offline!");
+            displayNoti("Cannot connect" ,guest_name + " is offline!");
         }
     }
 
@@ -141,17 +145,13 @@ public class chatRoom {
     }
 
     public void sendMess(String newmess) {
-        mutex.lock();
-        currentChat.sendSignal(newmess);
+        currentChat.sendMessage(newmess);
         list.add(new message(user_name,SEND, newmess));
-        mutex.unlock();
         messList.scrollTo(list.size()-1);
     }
 
     public void recMess(String newmess){
-        mutex.lock();
         list.add(new message(guest_name,RECEIVE, newmess));
-        mutex.unlock();
         messList.scrollTo(list.size()-1);
         if (!chatting) {
             this.number_unseen_mess.set(number_unseen_mess.get() + 1);
@@ -168,8 +168,6 @@ public class chatRoom {
         private Socket connection;
         private DataInputStream data_in;
         private DataOutputStream data_out;
-        private volatile boolean send_button = false;
-        private volatile String msg = "";
         private volatile boolean working = false;
 
         public void terminateChat() throws IOException {
@@ -182,32 +180,38 @@ public class chatRoom {
             this.data_in = data_in;
             this.data_out = data_out;
             this.working = true;
-            (new Thread(new sendMessage())).start();
+//            (new Thread(new sendMessage())).start();
+
             (new Thread(new recMessage())).start();
         }
 
-        public void sendSignal(String mess) {
-            this.send_button = true;
-            this.msg = mess;
-        }
-
-        public class sendMessage implements Runnable {
-
-            @Override
-            public void run() {
-                while (true) {
-                    if (send_button) {
-                        try {
-                            data_out.writeUTF(msg);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            break;
-                        }
-                        send_button = false;
-                    }
+        public void sendMessage(String mess) {
+            if (chat_accept.get()) {
+                try {
+                    data_out.writeUTF(mess);
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
+
+//        public class sendMessage implements Runnable {
+//
+//            @Override
+//            public void run() {
+//                while (true) {
+//                    if (send_button) {
+//                        try {
+//                            data_out.writeUTF(msg);
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                            break;
+//                        }
+//                        send_button = false;
+//                    }
+//                }
+//            }
+//        }
 
 
         public class recMessage implements Runnable {
@@ -216,9 +220,10 @@ public class chatRoom {
                 while (true) {
                     try {
                         // read the message sent to this client
-                        String msg = data_in.readUTF();
+                        String message = data_in.readUTF();
+//                        System.out.println(message);
                             Platform.runLater(() -> {
-                                chatRoom.this.recMess(msg);
+                                chatRoom.this.recMess(message);
                             });
                     } catch (IOException e) {
                         System.out.println("exception ");

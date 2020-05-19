@@ -3,7 +3,7 @@ package Java.Services.ClientServer;
 import Java.Controller.chat.chatRoom;
 import Java.Services.User.FriendInfo;
 import Java.Services.User.OwnerInfo;
-import Java.Services.internetServer.UserInfo;
+import Java.Services.User.UserInfo;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import org.apache.commons.lang3.StringUtils;
@@ -23,12 +23,11 @@ public class ClientHandler {
     private DataInputStream dis;
     private DataOutputStream dos;
 
-    private volatile String msg;
-    private volatile boolean send_signal;
-
 //    private ArrayList<chatRoom> friend_List = new ArrayList<chatRoom>();
 
     private OwnerInfo user_info;
+    public String request_add_user;
+    public String file_name;
 
     private boolean endConnection = false;
 
@@ -40,9 +39,22 @@ public class ClientHandler {
         return this.state_Client;
     }
 
-    public void sendMess(String msg){
-        this.msg = msg;
-        this.send_signal = true;
+    public void sendMess(String msg)  {
+        String[] tokens = StringUtils.split(msg);
+        String cmd_key = tokens[0];
+        switch (cmd_key) {
+            case "search":
+                String searchName = tokens[1];
+                searchByName(searchName);
+                break;
+            default:
+                try {
+                    dos.writeUTF(msg);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
     }
 
     public ClientHandler(InetAddress ip, int serverPort) {
@@ -59,7 +71,7 @@ public class ClientHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        sendMessage.start();
+//        sendMessage.start();
         readMessage.start();
     }
 
@@ -70,11 +82,13 @@ public class ClientHandler {
         System.out.println(temp_user.getPort());
         user_info = new OwnerInfo(temp_user.getUserName(),temp_user.getIP(),temp_user.getPort());
         for(FriendInfo friend:temp_user.getFriendList()){
+            System.out.println(friend.getFriendName() + "  " + friend.getStatus());
             user_info.addNewFriend(new chatRoom(temp_user.getUserName(), friend.getFriendName(), friend.getFriendIP(), friend.getPort(), friend.getStatus()));
         }
     }
 
-    private void receiveFriendInfo(String friend_name, String statusStr, String friend_ip, int port){
+    private void
+    receiveFriendInfo(String friend_name, String statusStr, String friend_ip, int port){
         boolean status;
         if(statusStr.equals("true")) status = true;
         else status = false;
@@ -124,7 +138,7 @@ public class ClientHandler {
 
     private void updateFriendStatus(String name, boolean status){
         chatRoom temp = searchByName(name);
-        temp.setOnline(true);
+        temp.setOnline(status);
 //        friend_List.get(index).setStatus(status);
     }
 
@@ -134,47 +148,13 @@ public class ClientHandler {
     }
 
     private chatRoom searchByName(String name){
+        System.out.println(user_info.getFriendList());
         for (chatRoom friend:user_info.getFriendList()){
-            if (friend.getGuestName() == name)
+            if (friend.getGuestName().equals(name))
                 return friend;
         }
         return null;
     }
-
-    Thread sendMessage = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            while (true) {
-                if (send_signal) {
-                    try {
-//                    String cmd = keyboard.nextLine();
-                        System.out.println("send to server");
-                        String[] tokens = StringUtils.split(msg);
-                        String cmd_key = tokens[0];
-                        send_signal = false;
-                        switch (cmd_key) {
-                            case "search":
-                                String searchName = tokens[1];
-                                searchByName(searchName);
-                                break;
-//                            case "friend": // View the friend list
-//                                displayFriendList();
-//                                break;
-                            case "quit":
-                                dos.writeUTF(msg);
-                                return;
-                            default:
-                                dos.writeUTF(msg);
-                                break;
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                }
-            }
-        }
-    });
 
     Thread readMessage = new Thread(new Runnable() {
         @Override
@@ -210,6 +190,7 @@ public class ClientHandler {
                                 break;
 
                             case "status":
+                                System.out.println(tokens[1] + " online");
                                 String status_name = tokens[1];
                                 String status_str = tokens[2];
                                 boolean status;
@@ -232,12 +213,21 @@ public class ClientHandler {
                                 receiveFile(fileName);
                                 state_Client.set(6);
                                 break;
-
+                            case "request_add":
+                                request_add_user = tokens[1];
+                                System.out.println("add friend " + request_add_user);
+                                state_Client.set(7);
+                                break;
+                            case "request_send":
+                                request_add_user = tokens[1];
+                                file_name = tokens[2];
+                                break;
                             case "end":
                                 endConnection = true;
-                                break;
+                                s.close();
+                                return;
                             case "login_error":
-                                state_Client.set(7);
+                                state_Client.set(8);
                                 break;
                         }
                     }
@@ -247,7 +237,6 @@ public class ClientHandler {
                     break;
                 }
             }
-            System.exit(0);
         }
     });
 }

@@ -37,7 +37,7 @@
                   </ImageView>
                   <Button fx:id="send" mnemonicParsing="false" prefHeight="26.0" prefWidth="68.0" style="-fx-background-radius: 0;" stylesheets="@../css/buttonSend.css" text="Send" />
                </children></HBox>
-            <BorderPane fx:id="messView" layoutX="179.0" layoutY="1.0" onMouseClicked="#handleAddFriend" prefHeight="373.0" prefWidth="424.0">
+            <BorderPane fx:id="messView" layoutX="179.0" layoutY="1.0" prefHeight="373.0" prefWidth="424.0">
                <top>
                   <Label fx:id="friend_name" prefHeight="48.0" prefWidth="424.0" textAlignment="CENTER" BorderPane.alignment="CENTER">
                      <font>

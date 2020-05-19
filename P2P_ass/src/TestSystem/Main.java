@@ -24,11 +24,11 @@ public class Main extends Application {
         loginController controllerfirst = loader.getController();
         InetAddress ip = null;
         try {
-            ip = InetAddress.getByName("192.168.0.106");
+            ip = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        controllerfirst.currentClient = new ClientHandler(ip, 8818);
+        controllerfirst.currentClient =  new ClientHandler(ip, 8818);
         controllerfirst.currentClient.getState().addListener(controllerfirst.login_confirm);
         primaryStage.getIcons().add(new Image("/Resources/images/Picture1.png"));
         primaryStage.setTitle("Login Chatapp");
