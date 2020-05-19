@@ -131,9 +131,6 @@ public  class ServerHandler extends Thread{
                                     handlePoolRequest.handleRequest(server.getUserList(), request_name, answer, "File", dir);
                                     state = "OPERATION";
                                     break;
-                                default:
-                                    dos.writeUTF("Please type yes or no");
-                                    break;
                             }
                             break;
                         }
