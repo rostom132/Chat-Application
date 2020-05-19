@@ -55,8 +55,7 @@ public  class ServerHandler extends Thread{
             dis.close();
             dos.close();
         } catch (IOException | InterruptedException e) {
-            System.out.println(userInfo.getUserName() + " connection lost");
-            //e.printStackTrace();
+            System.out.println(" Connection lost");
         }
     }
 
@@ -86,7 +85,7 @@ public  class ServerHandler extends Thread{
                                 dos.writeUTF("Please type signup or login or quit");
                                 break;
                         }
-                        break;
+                    break;
 
                     case "OPERATION":
                         switch (cmd) {
@@ -115,6 +114,7 @@ public  class ServerHandler extends Thread{
                                 dos.writeUTF(notification);
                                 break;
                         }
+                    break;
 
                     case "GET_RESPONSE":
                         if(tokens.length >= 3) {
@@ -138,6 +138,7 @@ public  class ServerHandler extends Thread{
                         else {
                             dos.writeUTF("Not enough parameters");
                         }
+                    break;
                 }
             }
         }
