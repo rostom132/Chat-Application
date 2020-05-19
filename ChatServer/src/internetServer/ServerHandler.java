@@ -55,7 +55,8 @@ public  class ServerHandler extends Thread{
             dis.close();
             dos.close();
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            System.out.println(userInfo.getUserName() + " connection lost");
+            //e.printStackTrace();
         }
     }
 
