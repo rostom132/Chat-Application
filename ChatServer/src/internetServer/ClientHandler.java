@@ -150,13 +150,13 @@ public class ClientHandler {
                                 break;
 
                             case "answer_add":
-                                // cmd: add request_user_name yes/no
+                                // cmd: answer_add request_user_name yes/no
                                 System.out.println("Response to add request");
                                 dos.writeUTF(cmd);
                                 break;
 
                             case "answer_send":
-                                // cmd: send request_user_name yes/no dir
+                                // cmd: answer_send request_user_name yes/no dir
                                 System.out.println("Response to sendfile request");
                                 dos.writeUTF(cmd);
                                 break;

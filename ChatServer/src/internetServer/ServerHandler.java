@@ -21,6 +21,7 @@ public  class ServerHandler extends Thread{
     // Synchronize purpose
     private ReentrantLock mutex = new ReentrantLock();
 
+    // Initialize object for reading and writing xml file
     private XML xml = new XML();
 
     // State of processing
@@ -55,7 +56,13 @@ public  class ServerHandler extends Thread{
             dis.close();
             dos.close();
         } catch (IOException | InterruptedException e) {
-            System.out.println(" Connection lost");
+            // Handle the case which suddenly disconnect
+            try {
+                if(state.equals("OPERATION")) handleUserRequest.handleLogOff();
+            } catch (IOException ex) {
+                System.out.println("Error when updating status");
+            }
+            System.out.println(userInfo.getUserName() + " connection lost");
         }
     }
 
@@ -457,8 +464,8 @@ public  class ServerHandler extends Thread{
                 }
                 // Check for the size of the file
                 File file_sent = new File(dir);
-                if ((int) file_sent.length() == 0 || (int) file_sent.length() > 10000) { // 10 Mb
-                    dos.writeUTF("Error: file size is > 10Mb or = 0Mb");
+                if ((int) file_sent.length() == 0 || (int) file_sent.length() > 50000) { // 50 Mb
+                    dos.writeUTF("Error: file size is > 50Mb or = 0Mb");
                     return;
                 }
                 // Find the receiver

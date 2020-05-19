@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="11.0.6" class="java.beans.XMLDecoder">
+ <object class="Java.Services.internetServer.UserInfo" id="UserInfo0">
+  <void property="IP">
+   <string>/192.168.0.107</string>
+  </void>
+  <void property="friendList">
+   <void method="add">
+    <object class="Java.Services.User.FriendInfo">
+     <void property="friendIP">
+      <string>/192.168.0.107</string>
+     </void>
+     <void property="friendName">
+      <string>tien</string>
+     </void>
+     <void property="port">
+      <int>30816</int>
+     </void>
+     <void property="status">
+      <boolean>true</boolean>
+     </void>
+    </object>
+   </void>
+  </void>
+  <void property="passWord">
+   <string>khoa</string>
+  </void>
+  <void property="port">
+   <int>9907</int>
+  </void>
+  <void property="userName">
+   <string>khoa</string>
+  </void>
+ </object>
+</java>
