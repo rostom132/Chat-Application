@@ -23,9 +23,9 @@ public class ClientHandler {
     private ArrayList<FriendInfo> friend_List = new ArrayList<FriendInfo>();
     private UserInfo user_info;
 
-    private int numOfRequest = 0;
-
     private boolean endConnection = false;
+
+    private String request_add_user, file_name;
 
     public ClientHandler(InetAddress ip, int serverPort) {
         this.ip = ip;
@@ -40,7 +40,8 @@ public class ClientHandler {
             dis = new DataInputStream(s.getInputStream());
             dos = new DataOutputStream(s.getOutputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Connection lost:" + user_info.getUserName());
+            //e.printStackTrace();
         }
         sendMessage.start();
         readMessage.start();
@@ -142,30 +143,41 @@ public class ClientHandler {
                                 String searchName = tokens[1];
                                 searchByName(searchName);
                                 break;
-                            case "view":
-                                // Function in the UI
-                                System.out.println("Trigger the handlePoolRequest");
-                                dos.writeUTF(cmd);
-                                break;
                             case "sendfile":
                                 // cmd: sendfile filename receiver_name
                                 System.out.println("Sending sendfile signal");
                                 dos.writeUTF(cmd);
                                 break;
+
+                            case "answer_add":
+                                // cmd: add request_user_name yes/no
+                                System.out.println("Response to add request");
+                                dos.writeUTF(cmd);
+                                break;
+
+                            case "answer_send":
+                                // cmd: send request_user_name yes/no dir
+                                System.out.println("Response to sendfile request");
+                                dos.writeUTF(cmd);
+                                break;
+
                             case "friend": // View the friend list
                                 displayFriendList();
                                 break;
+
                             case "quit":
                                 System.out.println("Quitting");
                                 dos.writeUTF(cmd);
                                 return;
+
                             default:
                                 dos.writeUTF(cmd);
                                 break;
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Error sending msg to server");
+                    break;
                 }
             }
         }
@@ -206,22 +218,17 @@ public class ClientHandler {
                                 updateFriendIP(ip_name, ip_address);
                                 break;
 
-                            case "new_request":
-                                numOfRequest++;
-                                System.out.println("Request count: " + numOfRequest);
-                                break;
-
                             case "request_add":
                                 // Trigger yes/no noti in UI
-                                String request_add_user = tokens[1];
+                                request_add_user = tokens[1];
                                 System.out.println(request_add_user + " wants to add you");
                                 break;
 
                             case "request_send":
                                 // Trigger yes/no in UI
-                                String request_send_user = tokens[1];
-                                String file_name = tokens[2];
-                                System.out.println(request_send_user + " wants to send you a file name " + file_name);
+                                request_add_user = tokens[1];
+                                file_name = tokens[2];
+                                System.out.println(request_add_user + " wants to send you a file name " + file_name);
                                 break;
 
                             case "sending":
@@ -245,8 +252,8 @@ public class ClientHandler {
                         }
                     }
                 } catch (IOException | ClassNotFoundException e) {
-                    System.out.println("Transfer file error");
-                    e.printStackTrace();
+                    System.out.println("Error reading msg from server");
+                    break;
                 }
             }
             System.exit(0);

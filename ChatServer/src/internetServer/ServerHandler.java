@@ -62,6 +62,7 @@ public  class ServerHandler extends Thread{
     private void handleClientSocket() throws IOException, InterruptedException {
         // Handler user cmd
         while(!state.equals("END") && (!(clientInput = dis.readUTF()).equals(""))) {
+            System.out.println("User enter: " + clientInput);
             String[] tokens = StringUtils.split(clientInput);
             clientInput = "";
             if(tokens != null && tokens.length > 0) {
@@ -105,9 +106,6 @@ public  class ServerHandler extends Thread{
                             case "remove":
                                 friend.clientRemoveFriend(server.getUserList(), tokens);
                                 break;
-                            case "view":
-                                handlePoolRequest.handleRequest(server.getRequestPool(), server.getUserList());
-                                break;
                             case "sendfile":
                                 handlePoolRequest.sendFileRequest(server.getUserList() ,tokens);
                                 break;
@@ -116,7 +114,32 @@ public  class ServerHandler extends Thread{
                                 dos.writeUTF(notification);
                                 break;
                         }
-                        break;
+
+                    case "GET_RESPONSE":
+                        if(tokens.length >= 3) {
+                            String request_name, answer, dir;
+                            request_name = tokens[1];
+                            answer = tokens[2];
+                            System.out.println("Response format: " + cmd + ":" + request_name + ":" + answer);
+                            switch (cmd) {
+                                case "answer_add": // add thien yes
+                                    handlePoolRequest.handleRequest(server.getUserList(), request_name, answer, "Friend", "null");
+                                    state = "OPERATION";
+                                    break;
+                                case "answer_send": // send thien yes filename
+                                    dir = tokens[3];
+                                    handlePoolRequest.handleRequest(server.getUserList(), request_name, answer, "File", dir);
+                                    state = "OPERATION";
+                                    break;
+                                default:
+                                    dos.writeUTF("Please type yes or no");
+                                    break;
+                            }
+                            break;
+                        }
+                        else {
+                            dos.writeUTF("Not enough parameters");
+                        }
                 }
             }
         }
@@ -231,7 +254,7 @@ public  class ServerHandler extends Thread{
             if(tokens.length == 3) {
                 String newUserName = tokens[1];
                 String newPassword = tokens[2];
-                System.out.println("New signup: " + newUserName + newPassword);
+                System.out.println("New user: " + newUserName + " " + newPassword);
                 boolean signUpSuccess = true;
                 for(String i : dataInfo.keySet()) {
                     if(newUserName.equals(i)) {
@@ -247,7 +270,7 @@ public  class ServerHandler extends Thread{
                     mutex.unlock();
                     // Write the userInfo to the xml file
                     xml.Encoder(newUser);
-                    dos.writeUTF("OK signup");
+                    dos.writeUTF("Register successful");
                 } else {
                     dos.writeUTF("Please choose another username");
                 }
@@ -263,7 +286,7 @@ public  class ServerHandler extends Thread{
                 String input_passWord = tokens[2];
 
                 boolean isCreated = false;
-                boolean isDupplicated = false;
+                boolean isDuplicated = false;
 
                 // Check inputInfo with dataInfo
                 for(String i : dataInfo.keySet()) {
@@ -275,12 +298,14 @@ public  class ServerHandler extends Thread{
                 // Check for duplicate clients
                 for(ServerHandler user : userList) {
                     if(user.systematic.getUserInfo().getUserName().equals(input_userName)) {
-                        isDupplicated = true;
+                        isDuplicated = true;
                     }
                 }
 
                 // Display result and handle login functions
-                if(isCreated && !isDupplicated) {
+                if(isCreated && !isDuplicated) {
+                    // Send to the user success login msg
+                    dos.writeUTF("Welcome to TKT chat app");
                     // Set the information to the user
                     userInfo.setUserName(input_userName);
                     userInfo.setPassWord(input_passWord);
@@ -315,7 +340,7 @@ public  class ServerHandler extends Thread{
                 } else if(!isCreated){
                     dos.writeUTF("Account not existed or password wrong");
                     return false;
-                } else if(isDupplicated) {
+                } else if(isDuplicated) {
                     dos.writeUTF("The account is already logged in");
                     return false;
                 }
@@ -421,60 +446,32 @@ public  class ServerHandler extends Thread{
 
     private class HandlePoolRequest {
 
-        public boolean checkIfInPool(HashMap<String, UserInfo> incomingRequest, String sender, String receiver, String requestType, String fileName) {
-            for(String i : incomingRequest.keySet()) {
-                String[] get_request_format = i.split(":", 4);
-
-                String requestUser = get_request_format[0];
-
-                String response_user = incomingRequest.get(i).getUserName();
-
-                String request_type = get_request_format[2];
-
-                String request_content = get_request_format[3];
-
-                if(requestUser.equals(sender) && response_user.equals(receiver) && request_type.equals(requestType)) {
-                    if(requestType.equals("Friend")) return true;
-                    else if(requestType.equals("File") && request_content.equals(fileName)) return true;
-                }
-            }
-            return false;
-        }
-
         private void sendFileRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
-            if(tokens.length == 3) {
+            if (tokens.length == 3) {
+                String request_user_name = userInfo.getUserName();
                 String dir = tokens[1];
                 String receiver = tokens[2];
-                String user_userName = userInfo.getUserName();
                 // Check if you send to yourself
-                if(user_userName.equals(receiver)) {
+                if (request_user_name.equals(receiver)) {
                     dos.writeUTF("You cannot send to your self");
-                    return;
-                }
-                // Check if you already request to send the file to same user
-                boolean isInPool = checkIfInPool(server.getRequestPool(), user_userName, receiver, "File", dir);
-                if(isInPool) {
-                    dos.writeUTF("You already request to send the file to this user");
                     return;
                 }
                 // Check for the size of the file
                 File file_sent = new File(dir);
-                if((int)file_sent.length() == 0 || (int)file_sent.length() > 10000) { // 10 Mb
+                if ((int) file_sent.length() == 0 || (int) file_sent.length() > 10000) { // 10 Mb
                     dos.writeUTF("Error: file size is > 10Mb or = 0Mb");
                     return;
                 }
                 // Find the receiver
-                for(ServerHandler user : userList) {
-                    if(user.systematic.getUserInfo().getUserName().equals(receiver)) {
+                ServerHandler response_user = null;
+                for (ServerHandler user : userList) {
+                    if (user.systematic.getUserInfo().getUserName().equals(receiver)) {
+                        // Found the response user
+                        response_user = user;
                         dos.writeUTF("File request has been sent");
                         // Send to the response user
-                        user.dos.writeUTF("new_request");
-                        int id = server.getPoolID();
-                        // Use mutex lock to protect the pool id and request pool
-                        mutex.lock();
-                            server.setPoolID(id + 1);
-                            server.addRequest(user_userName + ":" + id + ":File:" + dir, user.systematic.getUserInfo());
-                        mutex.unlock();
+                        response_user.dos.writeUTF("request_send " + request_user_name + " " + dir);
+                        response_user.state = "GET_RESPONSE";
                         break;
                     }
                 }
@@ -486,151 +483,100 @@ public  class ServerHandler extends Thread{
         private void addFriendRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
             if (tokens.length == 2) {
                 String user_userName = userInfo.getUserName();
-                String friendToAdd = tokens[1];
+                String response_user_name = tokens[1];
                 // Check if you add yourself
-                if(friendToAdd.equals(user_userName)) {
+                if (response_user_name.equals(user_userName)) {
                     dos.writeUTF("You cannot add yourself");
                     return;
                 }
-                // Check if you request the same person in the pool
-                boolean isInPool = checkIfInPool(server.getRequestPool(), user_userName, friendToAdd, "Friend", "No");
-                if(isInPool) {
-                    dos.writeUTF("You already add this user. Please wait for the reply");
-                    return;
-                }
-                // Get request in the pool
-                boolean isFriendExisted = systematic.isUserInFriendList(friendToAdd);
+                // Check if you already add this user
+                boolean isFriendExisted = systematic.isUserInFriendList(response_user_name);
                 if (!isFriendExisted) {
+                    ServerHandler response_user = null;
                     for (ServerHandler user : userList) {
-                        if (friendToAdd.equals(user.systematic.getUserInfo().getUserName())) {
-                            int id = server.getPoolID();
-                            // Use mutex lock to protect the pool id and request pool
-                            mutex.lock();
-                                server.setPoolID(id + 1);
-                                server.addRequest(user_userName + ":" + id + ":Friend:no", user.systematic.getUserInfo());
-                            mutex.unlock();
+                        if (response_user_name.equals(user.systematic.getUserInfo().getUserName())) {
+                            // Found the response user in the user list
+                            response_user = user;
+                            // Send the msg to the request user
                             dos.writeUTF("Request has been sent");
                             // Send to the response user
-                            user.dos.writeUTF("new_request");
+                            response_user.dos.writeUTF("request_add " + user_userName);
+                            response_user.state = "GET_RESPONSE";
                             return;
                         }
                     }
-                    dos.writeUTF("No user name " + friendToAdd + " found");
+                    dos.writeUTF("No user name " + response_user_name + " found");
                 } else {
-                    dos.writeUTF(friendToAdd + " is already added");
+                    dos.writeUTF(response_user_name + " is already added");
                 }
             } else {
                 dos.writeUTF("Invalid parameter");
             }
         }
+        
+        private void handleRequest(ArrayList<ServerHandler> userList , String request_user_name, String answer, String typeRequest, String dir) throws IOException {
+            // Get the request_user information
+            String response_user_name = userInfo.getUserName();
+            String response_user_ip = userInfo.getIP();
+            int response_user_port = userInfo.getPort();
 
-        private void handleRequest(HashMap<String, UserInfo> incomingRequest, ArrayList<ServerHandler> userList) throws IOException {
-            // Get info of user
-            String user_userName = userInfo.getUserName();
-            String user_IP = userInfo.getIP();
-            // Loop in the pool check for add friend request
-            int count = 0;
-            for(String i : incomingRequest.keySet()) {
-                // Get requestUser and responseUser
-                String[] get_request = i.split(":", 4);
-                String request_user_name = get_request[0];
-                String response_user_name = incomingRequest.get(i).getUserName();
+            ServerHandler request_user = null;
+            for(ServerHandler user : userList) {
+                if(user.userInfo.getUserName().equals(request_user_name)) {
+                     request_user = user;
+                     break;
+                }
+            }
+            if(request_user == null) {
+                dos.writeUTF("Request user has offline");
+                return;
+            }
+            String request_user_ip = request_user.userInfo.getIP();
+            int request_user_port = request_user.userInfo.getPort();
+            if (answer.equalsIgnoreCase("yes")) {
+                switch (typeRequest) {
+                    case "Friend": {
+                        // Add response_user to request_user list
+                        FriendInfo response_friend = new FriendInfo(response_user_name, true, response_user_ip, response_user_port);
+                        request_user.userInfo.getFriendList().add(response_friend);
+                        // Signal the response_user to add to local list friend
+                        request_user.dos.writeUTF("add " + response_user_name + " true " + response_user_ip + " " + response_user_port);
+    //                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
 
-                // Get type of request
-                String typeRequest = get_request[2];
-                // Get request content
-                String dir = get_request[3];
-
-                // Check if the responseUser is the user
-                if(user_userName.equals(response_user_name)) {
-                    count += 1;
-                    if(typeRequest.equals("Friend")) {
-//                        dos.writeUTF(request_user_name + " wants to add you(Yes/No)");
-                        dos.writeUTF("request_add " + request_user_name);
-                    }
-                    else if(typeRequest.equals("File")) {
-//                        dos.writeUTF(request_user_name + " send you a file(Yes/No))");
-                        dos.writeUTF("request_send " + request_user_name + " " + dir);
-                    }
-                    // Get the requestUser
-                    ServerHandler requestUser = null;
-                    for(ServerHandler user : userList) {
-                        if(user.systematic.getUserInfo().getUserName().equals(request_user_name)) {
-                            requestUser = user;
-                            break;
-                        }
-                    }
-                    if(requestUser == null) {
-                        dos.writeUTF("Request user has offline");
+                        // Add request_user to response_user list
+                        FriendInfo request_friend = new FriendInfo(request_user_name, true, request_user_ip, request_user_port);
+                        friend.addFriend(request_friend);
+                        // Signal the request_user to add to local list friend
+                        dos.writeUTF("add " + request_user_name + " true " + request_user_ip + " " + request_user_port);
+    //                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
                         break;
                     }
-                    String response = "";
-                    while(!(response = dis.readUTF()).equals("")) {
-                        if(response.equalsIgnoreCase("yes")) {
-                            switch (typeRequest) {
-                                case "Friend": {
-                                    System.out.println("Yes Yes");
-                                    // Add response_user to request_user list
-                                    FriendInfo response_user = new FriendInfo(response_user_name, true, user_IP, userInfo.getPort());
-                                    requestUser.friend.addFriend(response_user);
-                                    // Signal the response_user to add to local list friend
-                                    requestUser.dos.writeUTF("add " + response_user_name + " true " + user_IP + " " + userInfo.getPort());
-//                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
-
-                                    // Add request_user to response_user list
-                                    FriendInfo request_user = new FriendInfo(request_user_name, true, requestUser.userInfo.getIP(), requestUser.userInfo.getPort());
-                                    friend.addFriend(request_user);
-                                    // Signal the request_user to add to local list friend
-                                    dos.writeUTF("add " + request_user_name + " true " + requestUser.userInfo.getIP() + " " + requestUser.userInfo.getPort());
-//                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
-                                    break;
-                                }
-                                case "File": {
-                                    // Get the file transferred
-                                    String prefix = "sending " + dir;
-                                    dos.writeUTF(prefix);
-                                    // Send the file to the user
-                                    File file = new File(dir);
-                                    systematic.transferFile(file);
-                                    break;
-                                }
-                            }
-                            break;
-
-                        } else if(response.equalsIgnoreCase("no")) {
-                            switch (typeRequest) {
-                                case "Friend": {
-                                    // Send refuse msg to requestUser
-                                    requestUser.dos.writeUTF(user_userName + " refuse your request");
-                                    // Send refuse msg to responseUser
-                                    dos.writeUTF("You declined " + request_user_name + " request");
-                                    break;
-                                }
-                                case "File": {
-                                    // Send refuse msg to requestUser
-                                    requestUser.dos.writeUTF(user_userName + " refuse your file");
-                                    // Send refuse msg to responseUser
-                                    dos.writeUTF("You declined " + request_user_name + " file");
-                                    break;
-                                }
-                            }
-                            break;
-                        } else {
-                            dos.writeUTF("Please type yes or no");
-                        }
+                    case "File": {
+                        String prefix = "sending " + dir;
+                        dos.writeUTF(prefix);
+                        File file = new File(dir);
+                        systematic.transferFile(file);
+                        break;
+                    }
+                }
+            } else if (answer.equalsIgnoreCase("no")) {
+                switch (typeRequest) {
+                    case "Friend": {
+                        // Send refuse msg to requestUser
+                        request_user.dos.writeUTF(response_user_name + " refuse your request");
+                        // Send refuse msg to responseUser
+                        dos.writeUTF("You declined " + request_user_name + " request");
+                        break;
+                    }
+                    case "File": {
+                        // Send refuse msg to requestUser
+                        dos.writeUTF(response_user_name + " refuse your file");
+                        // Send refuse msg to responseUser
+                        dos.writeUTF("You declined " + request_user_name + " file");
+                        break;
                     }
                 }
             }
-            if(count > 0) {
-                // Clear all request pool
-                // User mutex lock to protect the request pool
-                mutex.lock();
-                    server.removeRequest(userInfo);
-                mutex.unlock();
-            } else {
-                dos.writeUTF("No request found");
-            }
         }
     }
-
 }

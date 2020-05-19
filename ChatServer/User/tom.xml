@@ -2,16 +2,16 @@
 <java version="11.0.6" class="java.beans.XMLDecoder">
  <object class="Java.Services.internetServer.UserInfo">
   <void property="IP">
-   <string>/192.168.0.107</string>
+   <string>/127.0.0.1</string>
   </void>
   <void property="passWord">
-   <string>tien</string>
+   <string>tom</string>
   </void>
   <void property="port">
-   <int>52475</int>
+   <int>38822</int>
   </void>
   <void property="userName">
-   <string>tien</string>
+   <string>tom</string>
   </void>
  </object>
 </java>

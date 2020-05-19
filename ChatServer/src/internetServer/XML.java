@@ -69,7 +69,6 @@ public class XML {
             // Read the userInfo
             UserInfo userInfo = (UserInfo) decoder.readObject();
             int friend_list_length =  userInfo.getFriendList().size();
-            System.out.println("XML Notification: " + friend_list_length);
             // Write all the userInfo to the hashmap
             if(typeToRead.equals("Info")) {
                 UserInfo user_hashmap = new UserInfo();
@@ -82,9 +81,7 @@ public class XML {
                 if(friend_list_length > 0) {
                     for (FriendInfo friend : userInfo.getFriendList()) {
                         // Write all the userFriend in the friend list
-                        System.out.println("XML Notification: " + friend.getFriendName()+ " " + friendList.size());
                         friendList.add(friend);
-                        System.out.println("After add:" + friendList.size());
                     }
                 }
             }
@@ -129,23 +126,7 @@ public class XML {
         }
     }
 
-    public void removeUser(List<String> XMLFile, UserInfo userInfo) {
-        // Remove the userInfo from the database
-        if(XMLFile == null) return;
-        String user_userName = userInfo.getUserName();
-        String concact = user_userName + ".xml";
-        for(String s : XMLFile) {
-            if(s.contains(concact)) {
-                File f = new File(s);
-                    if(f.delete()) {
-                        System.out.println("Deleted successfully");
-                    }
-            }
-        }
-    }
-
     public void interactFriend(String file, String removeName, boolean status, String interact_type) throws IOException {
-        System.out.println("Begin XML operations");
         FileInputStream is = null;
         try {
             is = new FileInputStream(new File(file));
@@ -154,7 +135,6 @@ public class XML {
             UserInfo userInfo = (UserInfo) decoder.readObject();
             // Create new friendList array to store
             ArrayList<FriendInfo> new_friend_list = new ArrayList<FriendInfo>();
-            System.out.println("Temp before: ");
             for(FriendInfo friend : userInfo.getFriendList()) {
                 if(!friend.getFriendName().equals(removeName)) {
                     new_friend_list.add(friend);

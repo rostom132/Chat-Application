@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 
 public class Server extends Thread{
     private final int serverPort;
-    private int poolID = 0;
     private  static ExecutorService pool = Executors.newFixedThreadPool(4);
 
     private List<String> XMLFile = null;
@@ -22,8 +21,6 @@ public class Server extends Thread{
     private HashMap<String, UserInfo> requestPool = new HashMap<String, UserInfo>();
 
     private XML xml = new XML(userData);
-
-    public int syncTest = 0;
 
     public List<String> getXMLFile() {
         return XMLFile;
@@ -60,18 +57,6 @@ public class Server extends Thread{
         return requestPool;
     }
 
-    public int getPoolID() {
-        return poolID;
-    }
-
-    public void setPoolID(int poolID) {
-        this.poolID = poolID;
-    }
-
-    public void addRequest(String sender, UserInfo reveiver) {
-        this.requestPool.put(sender, reveiver);
-    }
-
     public void removeUserInfo(String user_userName) {
         Iterator<Map.Entry<String, UserInfo>> iterator = userData.entrySet().iterator();
         while(iterator.hasNext()) {
@@ -88,15 +73,6 @@ public class Server extends Thread{
             }
         }
         return port;
-    }
-
-    public void removeRequest(UserInfo receiver) {
-        Iterator<Map.Entry<String, UserInfo>> iterator = requestPool.entrySet().iterator();
-        while(iterator.hasNext()) {
-            Map.Entry<String, UserInfo> entryPoint = iterator.next();
-            //System.out.println(entryPoint.getKey() + " " + entryPoint.getValue().getUserName());
-            if(entryPoint.getValue().getUserName().equals(receiver.getUserName())) iterator.remove();
-        }
     }
 
      @Override
