@@ -52,7 +52,7 @@
             <Image url="@../images/user_icon.png" />
          </image>
       </ImageView>
-      <Label fx:id="User" alignment="CENTER" layoutX="-99.0" layoutY="160.0" prefHeight="39.0" prefWidth="241.0" style="-fx-rotate: -90;">
+      <Label fx:id="User" alignment="CENTER" layoutX="-93.0" layoutY="151.0" prefHeight="39.0" prefWidth="231.0" style="-fx-rotate: -90;">
          <font>
             <Font name="Arial" size="27.0" />
          </font>
@@ -62,9 +62,14 @@
             <Image url="@../images/Picture1.png" />
          </image>
       </ImageView>
-      <ImageView fitHeight="23.0" fitWidth="33.0" layoutX="8.0" layoutY="334.0" onMouseClicked="#handleAddFriend" pickOnBounds="true" preserveRatio="true">
+      <ImageView fitHeight="23.0" fitWidth="33.0" layoutX="9.0" layoutY="335.0" onMouseClicked="#handleAddFriend" pickOnBounds="true" preserveRatio="true">
          <image>
             <Image url="@../images/addFriend.png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="27.0" fitWidth="27.0" layoutX="7.0" layoutY="296.0" onMouseClicked="#handleRemoveFriend" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/remove_icon.png" />
          </image>
       </ImageView>
       <Line endX="-70.5" layoutX="107.0" layoutY="363.0" startX="-102.0" stroke="WHITE" />

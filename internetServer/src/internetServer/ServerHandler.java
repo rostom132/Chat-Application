@@ -6,10 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public  class ServerHandler extends Thread{
@@ -290,9 +287,10 @@ public  class ServerHandler extends Thread{
         }
 
         public boolean handleLogin(HashMap<String, UserInfo> dataInfo , ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
-            if(tokens.length == 3) {
+            if(tokens.length == 4) {
                 String input_userName = tokens[1];
                 String input_passWord = tokens[2];
+                String user_ip = tokens[3];
 
                 boolean isCreated = false;
                 boolean isDuplicated = false;
@@ -318,7 +316,7 @@ public  class ServerHandler extends Thread{
                     // Set the information to the user
                     userInfo.setUserName(input_userName);
                     userInfo.setPassWord(input_passWord);
-                    userInfo.setIP(clientSocket.getInetAddress().toString());
+                    userInfo.setIP(user_ip);
                     userInfo.setPort(server.getPort(input_userName));
                     // Send msg to server
                     System.out.println("User " + userInfo.getUserName() + " has login " + new Date());
@@ -424,12 +422,14 @@ public  class ServerHandler extends Thread{
                     friend.removeFriendByName(removeName);
                     // Signal the local client to remove
                     dos.writeUTF("remove " + removeName);
+                    dos.writeUTF("You remove " + removeName + " successfully");
                     // Remove case: the removeUser is currently online
                     for(ServerHandler user : userList) {
                         if(user.userInfo.getUserName().equals(removeName)) {
                             // Remove the friend in the responseUser
                             user.friend.removeFriendByName(userInfo.getUserName());
                             user.dos.writeUTF("remove " + userInfo.getUserName());
+                            user.dos.writeUTF(userInfo + " removed you");
                             return;
                         }
                     }

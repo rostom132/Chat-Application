@@ -23,11 +23,11 @@ public class ClientHandler {
     private DataInputStream dis;
     private DataOutputStream dos;
 
-//    private ArrayList<chatRoom> friend_List = new ArrayList<chatRoom>();
-
     private OwnerInfo user_info;
+
     public String request_add_user;
     public String file_name;
+    public String server_noti;
 
     private boolean endConnection = false;
 
@@ -95,46 +95,7 @@ public class ClientHandler {
         this.user_info.addNewFriend(new chatRoom(user_info.getUserName(),friend_name,friend_ip, port, status));;
     }
 
-    private void receiveFile(String fileName) throws IOException {
-        int fileSize;
-        fileSize = Integer.parseInt(dis.readUTF());
-        System.out.println(fileSize);
-        if(fileSize > 0){
-            dos.writeUTF("OK");
-            byte[] b = new byte[fileSize];
-            InputStream is = s.getInputStream();
 
-            File file = new File("result" +  fileName);
-            FileOutputStream fos = new FileOutputStream(file);
-            BufferedOutputStream bos = new BufferedOutputStream(fos);
-            int byteRead;
-            while ((byteRead = is.read())!= -1) {
-                bos.write(byteRead);
-                fileSize--;
-                if(fileSize == 0) break;
-            }
-            bos.flush();
-            bos.close();
-            fos.close();
-            System.out.println("Done");
-            dos.writeUTF("Done");
-        }
-    }
-
-    private void removeByName(String name){
-        for (chatRoom friend:user_info.getFriendList()){
-            if (friend.getGuestName() == name){
-                user_info.getFriendList().removeAll(friend);
-                break;
-            }
-        }
-    }
-//    private void displayFriendList() {
-//        System.out.println(friend_List.size());
-//        for (int i = 0; i < friend_List.size(); i++) {
-//            System.out.println(friend_List.get(i).getFriendName() + " " + friend_List.get(i).getStatus() + " " + friend_List.get(i).getFriendIP() + " " + friend_List.get(i).getPort());
-//        }
-//    }
 
     private void updateFriendStatus(String name, boolean status){
         chatRoom temp = searchByName(name);
@@ -148,7 +109,6 @@ public class ClientHandler {
     }
 
     private chatRoom searchByName(String name){
-        System.out.println(user_info.getFriendList());
         for (chatRoom friend:user_info.getFriendList()){
             if (friend.getGuestName().equals(name))
                 return friend;
@@ -168,7 +128,6 @@ public class ClientHandler {
                         String cmd = tokens[0].toLowerCase();
                         switch (cmd) {
                             case "login":
-                                System.out.println("alo alo");
                                 dos.flush();
                                 receiveFriendList();
                                 state_Client.set(1);
@@ -185,7 +144,7 @@ public class ClientHandler {
 
                             case "remove":
                                 String remove_name = tokens[1];
-                                removeByName(remove_name);
+                                user_info.getFriendList().removeAll(searchByName(remove_name));
                                 state_Client.set(3);
                                 break;
 
@@ -204,23 +163,20 @@ public class ClientHandler {
                                 String ip_name = tokens[1];
                                 String ip_address = tokens[2];
                                 updateFriendIP(ip_name, ip_address);
+                                System.out.println(ip_address);
                                 state_Client.set(5);
                                 break;
 
-                            case "sending":
-                                String fileName = tokens[1];
-                                System.out.println("FileName: " + fileName);
-                                receiveFile(fileName);
-                                state_Client.set(6);
-                                break;
+//                            case "sending":
+//                                String fileName = tokens[1];
+//                                System.out.println("FileName: " + fileName);
+//                                receiveFile(fileName);
+//                                state_Client.set(6);
+//                                break;
                             case "request_add":
                                 request_add_user = tokens[1];
                                 System.out.println("add friend " + request_add_user);
                                 state_Client.set(7);
-                                break;
-                            case "request_send":
-                                request_add_user = tokens[1];
-                                file_name = tokens[2];
                                 break;
                             case "end":
                                 endConnection = true;
@@ -228,6 +184,10 @@ public class ClientHandler {
                                 return;
                             case "login_error":
                                 state_Client.set(8);
+                                break;
+                            default:
+                                server_noti = serverResponse;
+                                state_Client.set(9);
                                 break;
                         }
                     }

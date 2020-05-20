@@ -25,13 +25,11 @@ import javafx.stage.Stage;
 
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
-public class loginController implements Initializable {
+public class loginController {
 
     private Stage mainscene;
     private String name;
@@ -47,36 +45,40 @@ public class loginController implements Initializable {
     public ChangeListener<Number> login_confirm = new ChangeListener<Number>() {
         @Override
         public void changed(ObservableValue<? extends Number> observable, Number integer, Number t1) {
-            if(t1.equals(1)){
-                FXMLLoader loginSucess = new FXMLLoader(getClass().getResource("/Resources/views/mainUI.fxml"));
-                try {
-                    Parent root1 = (Parent) loginSucess.load();
-                    mainUIController user_remote = loginSucess.getController();
-                    new ServerP2P(name, user_remote, currentClient);
-                    Platform.runLater(() -> {
-                        mainscene.setTitle("Chatapp");
-                        mainscene.setScene(new Scene(root1));
-                        dragScene.dragWindow(root1,mainscene);
-                        currentClient.getState().removeListener(login_confirm);
-                        mainscene.show();
-                    });
+            switch (t1.intValue()) {
+                case 1:
+                    System.out.println("login success");
+                    FXMLLoader loginSucess = new FXMLLoader(getClass().getResource("/Resources/views/mainUI.fxml"));
+                    try {
+                        Parent root1 = (Parent) loginSucess.load();
+                        mainUIController user_remote = loginSucess.getController();
+                        new ServerP2P(name, user_remote, currentClient);
+                        Platform.runLater(() -> {
+                            mainscene.setTitle("Chatapp");
+                            mainscene.setScene(new Scene(root1));
+                            dragScene.dragWindow(root1, mainscene);
+                            currentClient.getState().removeListener(login_confirm);
+                            mainscene.show();
+                        });
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            else if(t1.equals(7)){
-                name = "";
-                pass = "";
-                notiBox.displayNoti("Wrong Password or Username", "Please try again!");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case 7:
+                    name = "";
+                    pass = "";
+                    notiBox.displayNoti("Wrong Password or Username", "Please try again!");
+                    currentClient.getState().set(0);
+                    break;
+                case 9:
+                    notiBox.displayNoti("Server Response!", currentClient.server_noti);
+                    currentClient.getState().set(0);
+                    break;
             }
         }
     };
 
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-
-    }
 
 
     @FXML
@@ -112,10 +114,16 @@ public class loginController implements Initializable {
         }
     }
 
-    public void logIn() throws IOException {
+    public void logIn()  {
         name = user_name.getText();
         pass = password.getText();
-        currentClient.sendMess("login " +name + " " + pass);
+        Socket socket = new Socket();
+        try {
+            socket.connect(new InetSocketAddress("google.com", 80));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        currentClient.sendMess("login " +name + " " + pass + " " + socket.getLocalAddress().getHostAddress());
     }
 }
 

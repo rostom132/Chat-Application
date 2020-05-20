@@ -52,14 +52,18 @@ public class mainUIController implements Initializable {
     public Label User;
     public ImageView logOut;
 
-    ChangeListener<Boolean> listenerAccept = new ChangeListener<Boolean>() {
+    ChangeListener<Number> listenerAccept = new ChangeListener<Number>() {
         @Override
-        public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
             // value changed
-            if (newValue) {
+            if (newValue.intValue() == 1) {
                 Platform.runLater(() -> {
                     messView.setCenter(currentUser.messList);
                     currentUser.setChatting(true);
+                });
+            } else if (newValue.intValue() == 2){
+                Platform.runLater(() -> {
+                    messView.setCenter(currentUser.rec_file);
                 });
             } else if (Server_online_status.get()){
                 Platform.runLater(() -> {
@@ -75,26 +79,18 @@ public class mainUIController implements Initializable {
     public ChangeListener<Number> mainUIcontrol = new ChangeListener<Number>() {
         @Override
         public void changed(ObservableValue<? extends Number> observable, Number integer, Number t1) {
-//             else if(t1.equals(2)){
-//                 notiBox.displayNoti("Add success!" , currentClient.getOwnerInfo().getFriendList().get(currentClient.getOwnerInfo().getFriendList().size()-1).getGuestName() + " accept your friend request!");
-//             }
-//             else if(t1.equals(3)){}
-//             else if(t1.equals(4)){}
-//             else if(t1.equals(5)){}
-//             else if(t1.equals(6)){}
-//             else if(t1.equals(7)){
-//                 if (confirmBox.checkConfirm("New Friend request", "Do you want to add " + currentClient.request_add_user +" ?"))
-//                     currentClient.sendMess("answer_add " + currentClient.request_add_user + " yes");
-//                 else
-//                     currentClient.sendMess("answer_add " + currentClient.request_add_user + " no");
-//                 this.currentClient.state
-//             }
-//             else if(t1.equals(8)){}
-
              switch (t1.intValue()){
                  case 2:
-                     notiBox.displayNoti("Add success!" , currentClient.getOwnerInfo().getFriendList().get(currentClient.getOwnerInfo().getFriendList().size()-1).getGuestName() + " accept your friend request!");
+                     notiBox.displayNoti("Add success!" , currentClient.getOwnerInfo().getFriendList().get(currentClient.getOwnerInfo().getFriendList().size()-1).getGuestName() + " now be your friend!");
                      currentClient.state_Client.set(1);
+                     currentClient.getState().set(1);
+                     break;
+                 case 3:
+                     Platform.runLater(() ->{
+                         messView.setCenter(null);
+                         friend_name.setText("");
+                     });
+                     currentClient.getState().set(1);
                      break;
                  case 7:
                      if (confirmBox.checkConfirm("New Friend request", "Do you want to add " + currentClient.request_add_user +" ?")) {
@@ -103,25 +99,33 @@ public class mainUIController implements Initializable {
                      else {
                          currentClient.sendMess("answer_add " + currentClient.request_add_user + " no");
                      }
+                     currentClient.state_Client.set(1);
                      break;
-
-
+                 case 9:
+                     notiBox.displayNoti("Server Response!", currentClient.server_noti);
+                     currentClient.state_Client.set(1);
+                     break;
             }
         }
     };
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        this.send.setOnAction(this::sendMess);
+        this.send.setOnAction(this::sendMessage);
         listOfFriends.setCellFactory(param -> new Cell());
         listOfFriends.prefHeight(50);
     }
 
     @FXML
-    public void handleAddFriend(MouseEvent arg) throws IOException {
-        String temp = addFriendBox.addFriend();
-        System.out.println("add " + temp);
+    public void handleAddFriend(MouseEvent arg){
+        String temp = addFriendBox.addRemoveFriend("Add new friend!");
         currentClient.sendMess("add " + temp);
+    }
+
+    @FXML
+    public void handleRemoveFriend(MouseEvent arg) {
+        String temp = addFriendBox.addRemoveFriend("Delete new friend!");
+        currentClient.sendMess("remove " + temp);
     }
 
     @FXML
@@ -129,7 +133,7 @@ public class mainUIController implements Initializable {
         currentClient.sendMess("quit");
         Server_online_status.set(false);
         for (chatRoom friend:currentClient.getOwnerInfo().getFriendList()){
-            if(friend.getChatAccept().get())friend.offRoom();
+            if(friend.getChatAccept().get() == 1 || friend.getChatAccept().get() == 2)friend.offRoom();
         }
         FXMLLoader login = new FXMLLoader(getClass().getResource("/Resources/views/LoginUI.fxml"));
         Parent root1 = (Parent) login.load();
@@ -151,19 +155,21 @@ public class mainUIController implements Initializable {
 
     @FXML
     public void handleMouseClick(MouseEvent arg0) {
-        if (currentUser != null && currentUser.getChatAccept().get())  {
+        if (currentUser != null)  {
             currentUser.setChatting(false);
             currentUser.getChatAccept().removeListener(listenerAccept);
         }
         currentUser = listOfFriends.getSelectionModel().getSelectedItem();
         if (currentUser == null) return;
         currentUser.getChatAccept().addListener(listenerAccept);
-        if (currentUser.getChatAccept().get()){
+        if (currentUser.getChatAccept().get() == 1){
             currentUser.setChatting(true);
             currentUser.resetUnseenMess();
             messView.setCenter(currentUser.messList);
-        } else {
+        } else if (currentUser.getChatAccept().get() == 0){
             messView.setCenter(currentUser.requestChat);
+        } else if(currentUser.getChatAccept().get() == 2){
+            messView.setCenter(currentUser.rec_file);
         }
         changeFriend(currentUser.getGuestName());
     }
@@ -173,16 +179,32 @@ public class mainUIController implements Initializable {
         if (event.getCode() == KeyCode.ENTER) {
             if (currentUser == null) return;
             String message = inputMess.getText();
+            if (message.equals("")) return;
             currentUser.sendMess(message);
             inputMess.clear();
         }
     }
 
+    private void sendMessage(ActionEvent e) {
+        if (currentUser == null) return;
+        String message = inputMess.getText();
+        if (message.equals("")) return;
+        currentUser.sendMess(message);
+        inputMess.clear();
+    }
+
     @FXML
     public void  handleSendFile(MouseEvent event) {
-        FileChooser fileChooser = new FileChooser();
-        configureFileChooser(fileChooser);
-        File file = fileChooser.showOpenDialog((Stage) ((Node)event.getSource()).getScene().getWindow());
+        if (currentUser != null && currentUser.getChatAccept().get()==1) {
+            FileChooser fileChooser = new FileChooser();
+            configureFileChooser(fileChooser);
+            File file = fileChooser.showOpenDialog((Stage) ((Node) event.getSource()).getScene().getWindow());
+            try {
+                currentUser.getCurrentChat().transferFile(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void configureFileChooser(FileChooser fileChooser) {
@@ -258,13 +280,13 @@ public class mainUIController implements Initializable {
         for(chatRoom temp_room:currentClient.getOwnerInfo().getFriendList()){
             if (temp_room.getGuestName().equals(user_name)){
                 temp_room.getStartChat(connection,data_in,data_out);
-                if (currentUser != null && currentUser.getChatAccept().get())  {
+                if (currentUser != null && currentUser.getChatAccept().get() == 1)  {
                     currentUser.setChatting(false);
                     currentUser.getChatAccept().removeListener(listenerAccept);
                 }
                 currentUser = temp_room;
                 currentUser.getChatAccept().addListener(listenerAccept);
-                if (currentUser.getChatAccept().get()){
+                if (currentUser.getChatAccept().get() == 1){
                     currentUser.setChatting(true);
                     currentUser.resetUnseenMess();
                     messView.setCenter(currentUser.messList);
@@ -280,12 +302,7 @@ public class mainUIController implements Initializable {
         }
     }
 
-    private void sendMess(ActionEvent e) {
-        if (currentUser == null) return;
-        String message = inputMess.getText();
-        currentUser.sendMess(message);
-        inputMess.clear();
-    }
+
 
     private void changeFriend(String name){
         friend_name.setText(name);

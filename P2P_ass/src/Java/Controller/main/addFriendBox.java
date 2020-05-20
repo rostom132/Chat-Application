@@ -21,11 +21,11 @@ public class addFriendBox{
     //Create variable
     static String friend_name;
 
-    public static String addFriend() {
+    public static String addRemoveFriend(String title) {
         Stage window = new Stage();
         window.initModality(Modality.APPLICATION_MODAL);
         window.getIcons().add(new Image("/Resources/images/Picture1.png"));
-        window.setTitle("Add New Friend");
+        window.setTitle(title);
         window.setMinWidth(450);
         Label label = new Label();
         label.setText("Insert the name of your friend!");

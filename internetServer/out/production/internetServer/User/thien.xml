@@ -2,32 +2,19 @@
 <java version="14" class="java.beans.XMLDecoder">
  <object class="Java.Services.User.UserInfo" id="UserInfo0">
   <void property="IP">
-   <string>/127.0.0.1</string>
+   <string>192.168.0.109</string>
   </void>
   <void property="friendList">
    <void method="add">
     <object class="Java.Services.User.FriendInfo">
      <void property="friendIP">
-      <string>/127.0.0.1</string>
+      <string>192.168.0.109</string>
      </void>
      <void property="friendName">
-      <string>jim</string>
+      <string>tien</string>
      </void>
      <void property="port">
-      <int>61669</int>
-     </void>
-    </object>
-   </void>
-   <void method="add">
-    <object class="Java.Services.User.FriendInfo">
-     <void property="friendIP">
-      <string>/127.0.0.1</string>
-     </void>
-     <void property="friendName">
-      <string>tom</string>
-     </void>
-     <void property="port">
-      <int>38822</int>
+      <int>30244</int>
      </void>
     </object>
    </void>
@@ -36,7 +23,7 @@
    <string>thien</string>
   </void>
   <void property="port">
-   <int>24462</int>
+   <int>10546</int>
   </void>
   <void property="userName">
    <string>thien</string>
