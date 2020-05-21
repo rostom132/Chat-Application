@@ -65,13 +65,19 @@ public class mainUIController implements Initializable {
                 Platform.runLater(() -> {
                     messView.setCenter(currentUser.rec_file);
                 });
-            } else if (Server_online_status.get()){
+            } else if (newValue.intValue() == 0){
                 Platform.runLater(() -> {
                     messView.setCenter(currentUser.requestChat);
-                    currentUser.setChatting(false);
-                    currentUser.chatError("offline");
                 });
             }
+
+//            if (!Server_online_status.get()){
+//                Platform.runLater(() -> {
+//                    messView.setCenter(currentUser.requestChat);
+//                    currentUser.setChatting(false);
+//                    currentUser.chatError("offline");
+//                });
+//            }
 
         }
     };
@@ -199,11 +205,17 @@ public class mainUIController implements Initializable {
             FileChooser fileChooser = new FileChooser();
             configureFileChooser(fileChooser);
             File file = fileChooser.showOpenDialog((Stage) ((Node) event.getSource()).getScene().getWindow());
-            try {
-                currentUser.getCurrentChat().transferFile(file);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//            try {
+            Thread temp = new Thread() {
+                public void run() {
+                    try {
+                        currentUser.getCurrentChat().transferFile(file);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            temp.start();
         }
     }
 
@@ -211,11 +223,6 @@ public class mainUIController implements Initializable {
         fileChooser.setTitle("Choose File to send");
         fileChooser.setInitialDirectory(
                 new File(System.getProperty("user.home"))
-        );
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("All Images", "*.*"),
-                new FileChooser.ExtensionFilter("JPG", "*.jpg"),
-                new FileChooser.ExtensionFilter("PNG", "*.png")
         );
     }
 

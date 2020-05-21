@@ -47,7 +47,6 @@ public class XML {
         // Write all the information of user to xml file
         FileOutputStream os = null;
         String user_userName = userInfo.getUserName();
-        int list_friend_size = userInfo.getFriendList().size();
         System.out.println(user_userName);
         try {
             os = new FileOutputStream(new File(userPath + "/" + user_userName + ".xml"));
@@ -116,35 +115,20 @@ public class XML {
         }
     }
 
-    public void interactFriendContainer(List<String> XMLFile, UserInfo userInfo, String removeName, boolean status, String interact_type) throws IOException {
+    public void interactFriendContainer(List<String> XMLFile, UserInfo userInfo, String removeName, boolean status, String ip, String interact_type, String interact_case) throws IOException {
         if(XMLFile == null) return;
         String user_userName = userInfo.getUserName();
         String concact = user_userName + ".xml";
         for (String s : XMLFile) {
             if(s.contains(concact)) {
                 System.out.println(s);
-                interactFriend(s, removeName, status, interact_type);
+                interactFriend(s, removeName, status, ip, interact_type, interact_case);
                 break;
             }
         }
     }
 
-    public void removeUser(List<String> XMLFile, UserInfo userInfo) {
-        // Remove the userInfo from the database
-        if(XMLFile == null) return;
-        String user_userName = userInfo.getUserName();
-        String concact = user_userName + ".xml";
-        for(String s : XMLFile) {
-            if(s.contains(concact)) {
-                File f = new File(s);
-                    if(f.delete()) {
-                        System.out.println("Deleted successfully");
-                    }
-            }
-        }
-    }
-
-    public void interactFriend(String file, String removeName, boolean status, String interact_type) throws IOException {
+    public void interactFriend(String file, String removeName, boolean status, String ip, String interact_type, String interact_case) throws IOException {
         System.out.println("Begin XML operations");
         FileInputStream is = null;
         try {
@@ -161,8 +145,15 @@ public class XML {
                 }
                 else if(friend.getFriendName().equals(removeName)) {
                     if(interact_type.equals("Update")) {
-                        friend.setStatus(status);
-                        new_friend_list.add(friend);
+                        if(interact_case.equals("login")) {
+                            friend.setStatus(status);
+                            friend.setFriendIP(ip);
+                            new_friend_list.add(friend);
+                        }
+                        else if(interact_case.equals("quit")) {
+                            friend.setStatus(status);
+                            new_friend_list.add((friend));
+                        }
                     }
                 }
             }

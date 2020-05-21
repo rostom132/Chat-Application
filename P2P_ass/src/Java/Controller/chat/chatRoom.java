@@ -1,5 +1,6 @@
 package Java.Controller.chat;
 
+import Java.Controller.main.confirmBox;
 import Java.Controller.main.notiBox;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -43,7 +44,7 @@ public class chatRoom {
     private ObservableList<message> list = FXCollections.observableArrayList();
     public ListView<message> messList = new ListView<message>();
     public Button requestChat = new Button();
-    public Label rec_file = new Label();
+    public Label rec_file = new Label("Receiving File");
 
     private IntegerProperty number_unseen_mess = new SimpleIntegerProperty(this, "number_unseen_mess", 0 );
     private IntegerProperty chat_status = new SimpleIntegerProperty(0);
@@ -130,7 +131,7 @@ public class chatRoom {
         requestChat.setStyle("-fx-background-color: #4CAF50;-fx-text-fill: aliceblue;  -fx-text_alignment: center; -fx-pref-height: 80px; -fx-pref-width: 120px");
         this.requestChat.setOnAction(requestChatting);
         this.rec_file.setText("Receiving File from " + guest_name);
-        this.rec_file.setStyle("-fx-background-color: #508EE6;-fx-text-fill: aliceblue;  -fx-text_alignment: center; -fx-pref-height: 80px; -fx-pref-width: 120px");
+        this.rec_file.setStyle("-fx-background-color: #508EE6;-fx-text-fill: aliceblue;  -fx-text_alignment: center; -fx-pref-height: 80px; -fx-pref-width: 200px");
         this.guest_ip = ip;
         this.user_name = user_name;
         this.guest_name = guest_name;
@@ -148,25 +149,32 @@ public class chatRoom {
     }
 
     public void sendMess(String newmess) {
-        currentChat.sendMessage(newmess);
-        list.add(new message(user_name,SEND, newmess));
-        messList.scrollTo(list.size()-1);
+        if (chat_status.get()==1 && chatting && !newmess.equals("")) {
+            currentChat.sendMessage(newmess);
+            list.add(new message(user_name, SEND, newmess));
+            messList.scrollTo(list.size() - 1);
+        }
     }
 
     public void recMess(String newmess){
         if(newmess.equals("send_file") && chat_status.get()==1){
-            try {
-                currentChat.receiveFile("new_file_from_"+guest_name);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Thread temp = new Thread() {
+                public void run() {
+                    try {
+                        System.out.println("nhan file nhan file");
+                        currentChat.receiveFile("new_file_from_"+guest_name);
+                    } catch (IOException  e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            temp.start();
             return;
         }
         list.add(new message(guest_name,RECEIVE, newmess));
         messList.scrollTo(list.size()-1);
         if (!chatting) {
             this.number_unseen_mess.set(number_unseen_mess.get() + 1);
-            System.out.println("new");
         }
     }
 
@@ -182,6 +190,20 @@ public class chatRoom {
         private DataInputStream data_in;
         private DataOutputStream data_out;
         private volatile boolean working = false;
+        private volatile boolean sending_file = false;
+        private Thread rec_thread;
+        private Object lock = new Object();
+
+        public Chat(Socket connection, DataInputStream data_in, DataOutputStream data_out) {
+            this.connection = connection;
+            this.data_in = data_in;
+            this.data_out = data_out;
+//            (new Thread(new sendMessage())).start();
+
+            rec_thread = new Thread(new recMessage());
+            rec_thread.start();
+        }
+
 
         public void terminateChat() throws IOException {
             this.connection.close();
@@ -189,45 +211,74 @@ public class chatRoom {
         }
 
         public void transferFile(File my_file) throws IOException {
+            sending_file = true;
+            chat_status.set(2);
+            rec_file.setText("Sending file...");
+            boolean send_accept = false;
             if (!my_file.exists() || !my_file.isFile()) return;
-            int fileSize;
-            fileSize = (int)my_file.length();
-            System.out.println(fileSize);
+            System.out.println("send file");
+            int fileSize = (int) my_file.length();
             byte b[] = new byte[fileSize];
-            FileInputStream fis = new FileInputStream(my_file);
+            FileInputStream fis =  new FileInputStream(my_file);
             BufferedInputStream bis = new BufferedInputStream(fis);
 
-            data_out.writeUTF("send_file");
+            data_out.writeUTF("send_file " + my_file.getName());
             data_out.writeUTF(Integer.toString(fileSize));
             System.out.println(Integer.toString(fileSize));
             // Wait for confirmation
-            String msg_rec = data_in.readUTF();
-            if (msg_rec.equals("OK")) {
+            String msg_rec = null;
+            try {
+                msg_rec = data_in.readUTF();
+                System.out.println(msg_rec);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (msg_rec.equals("OK_send_file")) {
                 System.out.println("OK check file size is done");
                 bis.read(b, 0, b.length);
-                OutputStream os = connection.getOutputStream();
+                OutputStream os = null;
+                os = connection.getOutputStream();
                 os.write(b, 0, b.length);
                 System.out.println("Done send");
                 os.flush();
-            } else if(msg_rec.equals("No")) {
+                send_accept = true;
+            } else if (msg_rec.equals("No")) {
                 notiBox.displayNoti("Can not transfer file!", guest_name + " denied!");
-                return;
+                send_accept = false;
             }
-            while(true) {
-                if(data_in.readUTF().equals("Done_sendfile")) break;
+            while (send_accept) {
+                if (data_in.readUTF().equals("Done_sendfile")) break;
+            }
+            chat_status.set(1);
+            sending_file = false;
+            synchronized(lock) {
+                lock.notify();
             }
         }
 
         public void receiveFile(String fileName) throws IOException {
-            int fileSize;
-            fileSize = Integer.parseInt(data_in.readUTF());
+            sending_file = true;
+            chat_status.set(2);
+            rec_file.setText("Receiving File...");
+            int fileSize = Integer.parseInt(data_in.readUTF());
             System.out.println(fileSize);
             if(fileSize > 0){
-                data_out.writeUTF("OK");
+                if (!confirmBox.checkConfirm("Send File Request!","Do you want to receive " +fileName + " from " + guest_name +"?")){
+                    data_out.writeUTF("Request is denied");
+                    data_out.writeUTF("No");
+                    sending_file = false;
+                    synchronized (lock){
+                        lock.notify();
+                    }
+                    return;
+                }
+                data_out.writeUTF("Sending File");
+                data_out.writeUTF("OK_send_file");
+                System.out.println("check size ok");
                 byte[] b = new byte[fileSize];
                 InputStream is = connection.getInputStream();
 
-                File file = new File("result" +  fileName);
+                File file = new File(guest_name+ "_" +  fileName);
                 FileOutputStream fos = new FileOutputStream(file);
                 BufferedOutputStream bos = new BufferedOutputStream(fos);
                 int byteRead;
@@ -236,51 +287,54 @@ public class chatRoom {
                     fileSize--;
                     if(fileSize == 0) break;
                 }
+                System.out.println("send file done");
                 bos.flush();
                 bos.close();
                 fos.close();
                 data_out.writeUTF("Done_sendfile");
             }
+            sending_file = false;
+            chat_status.set(1);
+            synchronized (lock){
+                lock.notify();
+            }
         }
 
-        public Chat(Socket connection, DataInputStream data_in, DataOutputStream data_out) {
-            this.connection = connection;
-            this.data_in = data_in;
-            this.data_out = data_out;
-//            (new Thread(new sendMessage())).start();
-
-            (new Thread(new recMessage())).start();
-        }
 
         public void sendMessage(String mess) {
-            if (chat_status.get()==1 && !mess.equals("")) {
-                try {
-                    data_out.writeUTF(mess);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            try {
+                data_out.writeUTF(mess);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
         public class recMessage implements Runnable {
             @Override
             public void run() {
-                while (true) {
-                    try {
-                        // read the message sent to this client
-                        String message = data_in.readUTF();
-//                        System.out.println(message);
+                synchronized (lock){
+                    while (true) {
+                        try {
+                            // read the message sent to this client
+                            while(sending_file) lock.wait();
+                            String message = data_in.readUTF();
+                            String arr_mess[] =  message.split(" ", 2);
+                            if (arr_mess[0].equals("send_file")) {
+                                receiveFile(arr_mess[1]);
+                                continue;
+                            }
                             Platform.runLater(() -> {
                                 chatRoom.this.recMess(message);
                             });
-                    } catch (IOException e) {
-                        try {
-                            connection.close();
-                            chatRoom.this.offRoom();
-                        } catch (IOException ioException) {
-                            ioException.printStackTrace();
+                        } catch (IOException | InterruptedException e) {
+                            try {
+                                connection.close();
+                                chatRoom.this.offRoom();
+                            } catch (IOException ioException) {
+                                ioException.printStackTrace();
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }

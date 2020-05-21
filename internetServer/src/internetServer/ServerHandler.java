@@ -113,9 +113,6 @@ public  class ServerHandler extends Thread{
                             case "remove":
                                 friend.clientRemoveFriend(server.getUserList(), tokens);
                                 break;
-                            case "sendfile":
-                                handlePoolRequest.sendFileRequest(server.getUserList() ,tokens);
-                                break;
                             default:
                                 String notification = "Unknown command " + cmd;
                                 dos.writeUTF(notification);
@@ -129,18 +126,10 @@ public  class ServerHandler extends Thread{
                             request_name = tokens[1];
                             answer = tokens[2];
                             System.out.println("Response format: " + cmd + ":" + request_name + ":" + answer);
-                            switch (cmd) {
-                                case "answer_add": // add thien yes
-                                    handlePoolRequest.handleRequest(server.getUserList(), request_name, answer, "Friend", "null");
-                                    state = "OPERATION";
-                                    break;
-                                case "answer_send": // send thien yes filename
-                                    dir = tokens[3];
-                                    handlePoolRequest.handleRequest(server.getUserList(), request_name, answer, "File", dir);
-                                    state = "OPERATION";
-                                    break;
+                            if (cmd.equals("answer_add")) {
+                                handlePoolRequest.handleRequest(server.getUserList(), request_name, answer);
+                                state = "OPERATION";
                             }
-                            break;
                         }
                         else {
                             dos.writeUTF("Not enough parameters");
@@ -173,7 +162,7 @@ public  class ServerHandler extends Thread{
             return false;
         }
 
-        public void updateFriendProperty(ArrayList<ServerHandler> userList, boolean status, String property) throws IOException {
+        public void updateFriendProperty(ArrayList<ServerHandler> userList, boolean status, String case_interact) throws IOException {
             // Get username of current user
             String user_username = userInfo.getUserName();
             String user_ip = userInfo.getIP();
@@ -183,31 +172,33 @@ public  class ServerHandler extends Thread{
                 boolean friendFound = user.systematic.isUserInFriendList(user_username);
                 if(friendFound) {
                     int index = user.friend.getFriendIndex(user_username);
-                    if(property.equals("Status")) {
+                    if(case_interact.equals("login")) {
                         user.userInfo.getFriendList().get(index).setStatus(status);
                         user.dos.writeUTF("status " + user_username + " " + status);
-                    }
-                    else if(property.equals("IP")) {
                         user.userInfo.getFriendList().get(index).setFriendIP(user_ip);
                         user.dos.writeUTF("ip " + user_username + " " + user_ip);
-                        return;
+                    }
+                    else if(case_interact.equals("quit")){
+                        user.userInfo.getFriendList().get(index).setStatus(status);
+                        user.dos.writeUTF("status " + user_username + " " + status);
                     }
                 }
             }
             // Update status to the offline user
             // --> Read in the xml file and update all the user in the database
+            mutex.lock();
             List<String> updateFile = xml.getXMLFile();
-            System.out.println("File read for update" + server.getXMLFile());
             for(String s : server.getUserInfo().keySet()) {
                 if(!s.equals(user_username)) {
                     boolean isUserOnline = systematic.isUserOnline(server.getUserList(), s);
                     if (!isUserOnline) {
                         UserInfo offline_user = server.getUserInfo().get(s);
                         System.out.println("Offline: " + offline_user.getUserName());
-                        xml.interactFriendContainer(updateFile, offline_user, user_username, status, "Update");
+                        xml.interactFriendContainer(updateFile, offline_user, user_username, status, user_ip, "Update", case_interact);
                     }
                 }
             }
+            mutex.unlock();
         }
 
         public void displayAllOnlineClients(ArrayList<ServerHandler> userList) throws IOException {
@@ -226,31 +217,6 @@ public  class ServerHandler extends Thread{
             System.out.println("Send list friend with size: " + userInfo.getFriendList());
             System.out.println(userInfo.getPort());
             oos.writeObject(userInfo);
-        }
-
-        public void transferFile(File my_file) throws IOException {
-            if (!my_file.exists() || !my_file.isFile()) return;
-            int fileSize;
-            fileSize = (int)my_file.length();
-            System.out.println(fileSize);
-            byte b[] = new byte[fileSize];
-            FileInputStream fis = new FileInputStream(my_file);
-            BufferedInputStream bis = new BufferedInputStream(fis);
-
-            dos.writeUTF(Integer.toString(fileSize));
-            System.out.println(Integer.toString(fileSize));
-            // Wait for confirmation
-            if (dis.readUTF().equals("OK")) {
-                System.out.println("OK check file size is done");
-                bis.read(b, 0, b.length);
-                OutputStream os = clientSocket.getOutputStream();
-                os.write(b, 0, b.length);
-                System.out.println("Done send");
-                os.flush();
-            }
-            while(true) {
-                if(dis.readUTF().equals("Done")) break;
-            }
         }
     }
 
@@ -321,22 +287,25 @@ public  class ServerHandler extends Thread{
                     // Send msg to server
                     System.out.println("User " + userInfo.getUserName() + " has login " + new Date());
 
+                    mutex.lock();
                     // Read all the friend of the current user
-                    System.out.println(server.getXMLFile());
-
                     xml.readFileFriend(server.getXMLFile(), userInfo, userInfo.getFriendList());
+
+                    mutex.lock();
+                    // Write back with the new information
+                    xml.Encoder(userInfo);
+                    mutex.unlock();
+
+                    // Broadcast online to friend list
+                    systematic.updateFriendProperty(server.getUserList(), true, "login");
+
+                    mutex.unlock();
 
                     // Signal the local user to receiver friend list
                     dos.writeUTF("login");
 
                     // Send the friendList to the local user
                     systematic.sendCurrentFriendList();
-
-                    // Broadcast online to friend list
-                    systematic.updateFriendProperty(server.getUserList(), true, "Status");
-
-                    // Update this userIP to all of user friends
-                    systematic.updateFriendProperty(server.getUserList(), true, "IP");
 
                     // Use mutex lock to protect the userList
                     mutex.lock();
@@ -364,11 +333,13 @@ public  class ServerHandler extends Thread{
             server.removeUser(getClientHandler());
             mutex.unlock();
 
+            // Broadcast online to friend list
+            systematic.updateFriendProperty(server.getUserList(), false, "quit");
+
+            mutex.lock();
             // Add all the friends to the xml file
             xml.Encoder(userInfo);
-
-            // Broadcast online to friend list
-            systematic.updateFriendProperty(server.getUserList(), false, "Status");
+            mutex.unlock();
         }
     }
 
@@ -382,7 +353,6 @@ public  class ServerHandler extends Thread{
             FriendInfo friendFound = userInfo.getFriendList().get(index);
             return friendFound;
         }
-
 
         public int getFriendIndex(String friend_name) {
             int index = 0;
@@ -429,7 +399,7 @@ public  class ServerHandler extends Thread{
                             // Remove the friend in the responseUser
                             user.friend.removeFriendByName(userInfo.getUserName());
                             user.dos.writeUTF("remove " + userInfo.getUserName());
-                            user.dos.writeUTF(userInfo + " removed you");
+                            user.dos.writeUTF(userInfo.getUserName() + " removed you");
                             return;
                         }
                     }
@@ -443,8 +413,10 @@ public  class ServerHandler extends Thread{
                     }
                     System.out.println("Offline: " + offline_user.getUserName());
                     System.out.println("Online: " + userInfo.getUserName());
+                    mutex.lock();
                     List<String> updateFile = xml.getXMLFile();
-                    xml.interactFriendContainer(updateFile, offline_user, userInfo.getUserName(), false, "Remove");
+                    xml.interactFriendContainer(updateFile, offline_user, userInfo.getUserName(), false, "null" , "Remove", "null");
+                    mutex.unlock();
                     System.out.println("Remove offline successfully");
                 }
             } else {
@@ -454,40 +426,6 @@ public  class ServerHandler extends Thread{
     }
 
     private class HandlePoolRequest {
-
-        private void sendFileRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
-            if (tokens.length == 3) {
-                String request_user_name = userInfo.getUserName();
-                String dir = tokens[1];
-                String receiver = tokens[2];
-                // Check if you send to yourself
-                if (request_user_name.equals(receiver)) {
-                    dos.writeUTF("You cannot send to your self");
-                    return;
-                }
-                // Check for the size of the file
-                File file_sent = new File(dir);
-                if ((int) file_sent.length() == 0 || (int) file_sent.length() > 50000) { // 50 Mb
-                    dos.writeUTF("Error: file size is > 50Mb or = 0Mb");
-                    return;
-                }
-                // Find the receiver
-                ServerHandler response_user = null;
-                for (ServerHandler user : userList) {
-                    if (user.systematic.getUserInfo().getUserName().equals(receiver)) {
-                        // Found the response user
-                        response_user = user;
-                        dos.writeUTF("File request has been sent");
-                        // Send to the response user
-                        response_user.dos.writeUTF("request_send " + request_user_name + " " + dir);
-                        response_user.state = "GET_RESPONSE";
-                        break;
-                    }
-                }
-            } else {
-                dos.writeUTF("Invalid parameter");
-            }
-        }
 
         private void addFriendRequest(ArrayList<ServerHandler> userList, String[] tokens) throws IOException {
             if (tokens.length == 2) {
@@ -523,7 +461,7 @@ public  class ServerHandler extends Thread{
             }
         }
 
-        private void handleRequest(ArrayList<ServerHandler> userList , String request_user_name, String answer, String typeRequest, String dir) throws IOException {
+        private void handleRequest(ArrayList<ServerHandler> userList , String request_user_name, String answer) throws IOException {
             // Get the request_user information
             String response_user_name = userInfo.getUserName();
             String response_user_ip = userInfo.getIP();
@@ -543,48 +481,22 @@ public  class ServerHandler extends Thread{
             String request_user_ip = request_user.userInfo.getIP();
             int request_user_port = request_user.userInfo.getPort();
             if (answer.equalsIgnoreCase("yes")) {
-                switch (typeRequest) {
-                    case "Friend": {
-                        // Add response_user to request_user list
-                        FriendInfo response_friend = new FriendInfo(response_user_name, true, response_user_ip, response_user_port);
-                        request_user.userInfo.getFriendList().add(response_friend);
-                        // Signal the response_user to add to local list friend
-                        request_user.dos.writeUTF("add " + response_user_name + " true " + response_user_ip + " " + response_user_port);
-                        //                                    System.out.println(request_user_name + " " + requestUser.userInfo.getFriendList());
+                // Add response_user to request_user list
+                FriendInfo response_friend = new FriendInfo(response_user_name, true, response_user_ip, response_user_port);
+                request_user.userInfo.getFriendList().add(response_friend);
+                // Signal the response_user to add to local list friend
+                request_user.dos.writeUTF("add " + response_user_name + " true " + response_user_ip + " " + response_user_port);
 
-                        // Add request_user to response_user list
-                        FriendInfo request_friend = new FriendInfo(request_user_name, true, request_user_ip, request_user_port);
-                        friend.addFriend(request_friend);
-                        // Signal the request_user to add to local list friend
-                        dos.writeUTF("add " + request_user_name + " true " + request_user_ip + " " + request_user_port);
-                        //                                    System.out.println(response_user_name + " " + userInfo.getFriendList());
-                        break;
-                    }
-                    case "File": {
-                        String prefix = "sending " + dir;
-                        dos.writeUTF(prefix);
-                        File file = new File(dir);
-                        systematic.transferFile(file);
-                        break;
-                    }
-                }
+                // Add request_user to response_user list
+                FriendInfo request_friend = new FriendInfo(request_user_name, true, request_user_ip, request_user_port);
+                friend.addFriend(request_friend);
+                // Signal the request_user to add to local list friend
+                dos.writeUTF("add " + request_user_name + " true " + request_user_ip + " " + request_user_port);
             } else if (answer.equalsIgnoreCase("no")) {
-                switch (typeRequest) {
-                    case "Friend": {
-                        // Send refuse msg to requestUser
-                        request_user.dos.writeUTF(response_user_name + " refuse your request");
-                        // Send refuse msg to responseUser
-                        dos.writeUTF("You declined " + request_user_name + " request");
-                        break;
-                    }
-                    case "File": {
-                        // Send refuse msg to requestUser
-                        dos.writeUTF(response_user_name + " refuse your file");
-                        // Send refuse msg to responseUser
-                        dos.writeUTF("You declined " + request_user_name + " file");
-                        break;
-                    }
-                }
+                // Send refuse msg to requestUser
+                request_user.dos.writeUTF(response_user_name + " refuse your request");
+                // Send refuse msg to responseUser
+                dos.writeUTF("You declined " + request_user_name + " request");
             }
         }
     }

@@ -16,24 +16,18 @@
      <void property="port">
       <int>10546</int>
      </void>
-     <void property="status">
-      <boolean>true</boolean>
-     </void>
     </object>
    </void>
    <void method="add">
     <object class="Java.Services.User.FriendInfo">
      <void property="friendIP">
-      <string>192.168.0.109</string>
+      <string>192.168.1.145</string>
      </void>
      <void property="friendName">
       <string>khoa</string>
      </void>
      <void property="port">
       <int>19421</int>
-     </void>
-     <void property="status">
-      <boolean>true</boolean>
      </void>
     </object>
    </void>

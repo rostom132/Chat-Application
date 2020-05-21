@@ -16,6 +16,9 @@
      <void property="port">
       <int>30244</int>
      </void>
+     <void property="status">
+      <boolean>true</boolean>
+     </void>
     </object>
    </void>
   </void>
