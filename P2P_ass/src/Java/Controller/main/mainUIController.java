@@ -5,6 +5,7 @@ import Java.Controller.dragScene;
 import Java.Controller.login.loginController;
 import Java.Services.ClientServer.ClientHandler;
 //import animatefx.animation.FadeInDownBig;
+import TestSystem.Main;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -147,7 +148,7 @@ public class mainUIController implements Initializable {
         this.currentClient.getState().removeListener(mainUIcontrol);
         InetAddress ip = null;
         try {
-            ip = InetAddress.getByName("127.0.0.1");
+            ip = InetAddress.getByName(Main.IP);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }

@@ -17,6 +17,8 @@ import java.net.UnknownHostException;
 
 public class Main extends Application {
 
+    public static final String IP = "192.168.0.106";
+
     @Override
     public void start(Stage primaryStage) throws Exception{
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/Resources/views/LoginUI.fxml"));
@@ -24,7 +26,7 @@ public class Main extends Application {
         loginController controllerfirst = loader.getController();
         InetAddress ip = null;
         try {
-            ip = InetAddress.getByName("127.0.0.1");
+            ip = InetAddress.getByName(Main.IP);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
