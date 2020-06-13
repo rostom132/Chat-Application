@@ -277,8 +277,6 @@ public  class ServerHandler extends Thread{
 
                 // Display result and handle login functions
                 if(isCreated && !isDuplicated) {
-                    // Send to the user success login msg
-                    dos.writeUTF("Welcome to TKT chat app");
                     // Set the information to the user
                     userInfo.setUserName(input_userName);
                     userInfo.setPassWord(input_passWord);

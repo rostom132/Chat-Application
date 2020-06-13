@@ -17,7 +17,7 @@ import java.net.UnknownHostException;
 
 public class Main extends Application {
 
-    public static final String IP = "192.168.0.106";
+    public static final String IP = "127.0.0.1";
 
     @Override
     public void start(Stage primaryStage) throws Exception{

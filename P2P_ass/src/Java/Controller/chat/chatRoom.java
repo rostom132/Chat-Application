@@ -92,12 +92,16 @@ public class chatRoom {
     public void setGuestIP(String ip){
         this.guest_ip = ip;
     }
-//    public void setUserName(String name){ this.user_name = name;}
+//    public void setUserName(String name){ this.user_name = name;}x
 
     public void offRoom() throws IOException {
         currentChat.terminateChat();
         this.chatting = false;
         this.chat_status.set(0);
+        Platform.runLater(() -> {
+            this.requestChat.setText("Request");
+            this.requestChat.setOnAction(requestChatting);
+        });
     }
 
     EventHandler<ActionEvent> requestChatting = new EventHandler<ActionEvent>() {
@@ -105,7 +109,7 @@ public class chatRoom {
         public void handle(ActionEvent event) {
             if (chatRoom.this.getChatAccept().get()==0) {
                 currentRequest = new Request();
-                requestChat.setText("Panding...");
+                requestChat.setText("Pending...");
                 chatRoom.this.requestChat.setOnAction(null);
                 System.out.println(port);
             }
@@ -117,12 +121,12 @@ public class chatRoom {
             this.requestChat.setText("Request");
             this.requestChat.setOnAction(requestChatting);
         });
-        if (status.equals("Can't Connet!")) {
-            notiBox.displayNoti("Cannot connet",guest_name + " is not Online!");
-        } else if (status.equals(("Denied!"))) {
+        if (status.equals(("Denied!"))) {
             notiBox.displayNoti("Deny","Request denied from " + guest_name);
-        }else{
-            notiBox.displayNoti("Cannot connect" ,guest_name + " is offline!");
+        }else if (status.equals("offline")){
+            notiBox.displayNoti("Notification" ,guest_name + " is offline!");
+        }else {
+            notiBox.displayNoti("Cannot connet",guest_name + " is not Online!");
         }
     }
 

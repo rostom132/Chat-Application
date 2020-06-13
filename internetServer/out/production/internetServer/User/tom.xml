@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="14" class="java.beans.XMLDecoder">
+ <object class="Java.Services.User.UserInfo">
+  <void property="IP">
+   <string>192.168.43.163</string>
+  </void>
+  <void property="passWord">
+   <string>tom</string>
+  </void>
+  <void property="port">
+   <int>31726</int>
+  </void>
+  <void property="userName">
+   <string>tom</string>
+  </void>
+ </object>
+</java>

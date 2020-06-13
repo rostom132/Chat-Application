@@ -1,9 +1,11 @@
 package Java.Services.ClientServer;
 
 import Java.Controller.chat.chatRoom;
+import Java.Controller.main.notiBox;
 import Java.Services.User.FriendInfo;
 import Java.Services.User.OwnerInfo;
 import Java.Services.User.UserInfo;
+import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import org.apache.commons.lang3.StringUtils;
@@ -70,6 +72,9 @@ public class ClientHandler {
             dos = new DataOutputStream(s.getOutputStream());
         } catch (IOException e) {
             e.printStackTrace();
+            Platform.runLater(() -> {
+                notiBox.displayNoti("Server is not working!", "Please wait for a few minutes!");
+            });
         }
 //        sendMessage.start();
         readMessage.start();
