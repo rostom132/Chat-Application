@@ -8,7 +8,7 @@
    <void method="add">
     <object class="Java.Services.User.FriendInfo">
      <void property="friendIP">
-      <string>192.168.0.198</string>
+      <string>192.168.43.163</string>
      </void>
      <void property="friendName">
       <string>tien</string>
@@ -21,7 +21,7 @@
    <void method="add">
     <object class="Java.Services.User.FriendInfo">
      <void property="friendIP">
-      <string>192.168.0.114</string>
+      <string>192.168.43.94</string>
      </void>
      <void property="friendName">
       <string>khoa</string>

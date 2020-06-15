@@ -161,6 +161,7 @@ public class chatRoom {
     }
 
     public void recMess(String newmess){
+        if (newmess == "") return;
         if(newmess.equals("send_file") && chat_status.get()==1){
             Thread temp = new Thread() {
                 public void run() {
@@ -197,6 +198,7 @@ public class chatRoom {
         private volatile boolean sending_file = false;
         private Thread rec_thread;
         private Object lock = new Object();
+        private volatile String sending_file_mes = null;
 
         public Chat(Socket connection, DataInputStream data_in, DataOutputStream data_out) {
             this.connection = connection;
@@ -231,13 +233,8 @@ public class chatRoom {
             System.out.println(Integer.toString(fileSize));
             // Wait for confirmation
             String msg_rec = null;
-            try {
-                msg_rec = data_in.readUTF();
-                System.out.println(msg_rec);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (msg_rec.equals("OK_send_file")) {
+            while (sending_file_mes == null){}
+            if (sending_file_mes.equals("OK_send_file")) {
                 System.out.println("OK check file size is done");
                 bis.read(b, 0, b.length);
                 OutputStream os = null;
@@ -246,10 +243,11 @@ public class chatRoom {
                 System.out.println("Done send");
                 os.flush();
                 send_accept = true;
-            } else if (msg_rec.equals("No")) {
+            } else if (sending_file_mes.equals("No")) {
                 notiBox.displayNoti("Can not transfer file!", guest_name + " denied!");
                 send_accept = false;
             }
+            sending_file_mes = null;
             while (send_accept) {
                 if (data_in.readUTF().equals("Done_sendfile")) break;
             }
@@ -261,7 +259,6 @@ public class chatRoom {
         }
 
         public void receiveFile(String fileName) throws IOException {
-            sending_file = true;
             chat_status.set(2);
             rec_file.setText("Receiving File...");
             int fileSize = Integer.parseInt(data_in.readUTF());
@@ -276,8 +273,11 @@ public class chatRoom {
                     }
                     return;
                 }
-                data_out.writeUTF("Sending File");
+                data_out.flush();
+//                data_out.writeUTF("send");
+//                data_out.flush();
                 data_out.writeUTF("OK_send_file");
+                data_out.flush();
                 System.out.println("check size ok");
                 byte[] b = new byte[fileSize];
                 InputStream is = connection.getInputStream();
@@ -320,11 +320,17 @@ public class chatRoom {
                     while (true) {
                         try {
                             // read the message sent to this client
-                            while(sending_file) lock.wait();
+                            while(sending_file) {
+                                lock.wait();
+                                System.out.println( "bay mau");
+                            }
                             String message = data_in.readUTF();
+                            if(sending_file) sending_file_mes = message;
+                            System.out.println("new"+message+"new");
                             String arr_mess[] =  message.split(" ", 2);
                             if (arr_mess[0].equals("send_file")) {
                                 receiveFile(arr_mess[1]);
+                                sending_file = true;
                                 continue;
                             }
                             Platform.runLater(() -> {

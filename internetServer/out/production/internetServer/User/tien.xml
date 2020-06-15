@@ -8,16 +8,13 @@
    <void method="add">
     <object class="Java.Services.User.FriendInfo">
      <void property="friendIP">
-      <string>192.168.43.243</string>
+      <string>192.168.0.114</string>
      </void>
      <void property="friendName">
       <string>thien</string>
      </void>
      <void property="port">
       <int>34302</int>
-     </void>
-     <void property="status">
-      <boolean>true</boolean>
      </void>
     </object>
    </void>
@@ -31,9 +28,6 @@
      </void>
      <void property="port">
       <int>35731</int>
-     </void>
-     <void property="status">
-      <boolean>true</boolean>
      </void>
     </object>
    </void>
