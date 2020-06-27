@@ -152,7 +152,7 @@ public class mainUIController implements Initializable {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        controllerfirst.currentClient =  new ClientHandler(ip, 8818);
+        controllerfirst.currentClient =  new ClientHandler(ip, Main.PORT);
         controllerfirst.currentClient.getState().addListener(controllerfirst.login_confirm);
         Stage mainScene = (Stage) (Stage) ((Node)arg.getSource()).getScene().getWindow();
         mainScene.setScene(new Scene(root1));

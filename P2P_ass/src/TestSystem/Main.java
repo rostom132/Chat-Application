@@ -11,13 +11,13 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import Java.Controller.login.loginController;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public class Main extends Application {
 
-    public static final String IP = "127.0.0.1";
+    public static final String IP = "35.240.225.11";
+    public static final int PORT = 9999;
 
     @Override
     public void start(Stage primaryStage) throws Exception{
@@ -30,7 +30,7 @@ public class Main extends Application {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        controllerfirst.currentClient =  new ClientHandler(ip, 8818);
+        controllerfirst.currentClient =  new ClientHandler(ip, PORT);
         controllerfirst.currentClient.getState().addListener(controllerfirst.login_confirm);
         primaryStage.getIcons().add(new Image("/Resources/images/Picture1.png"));
         primaryStage.setTitle("Login Chatapp");
